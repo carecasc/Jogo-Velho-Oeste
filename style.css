@@ -561,8 +561,8 @@ button, input { font: inherit; color: inherit; }
 .scene-bg, .scene-bg svg { position: absolute; inset: 0; width: 100%; height: 100%; }
 
 .wall-area { position: absolute; }
-.my-area { left: 5%; top: 0; width: 46%; height: 100%; }
-.enemy-area { --wall-l: 26%; left: 63%; top: 33%; width: 28%; height: 36%; }
+.my-area { --fig: .84; left: 13%; top: 0; width: 42%; height: 100%; }
+.enemy-area { --wall-l: 26%; left: 66%; top: 33%; width: 28%; height: 36%; }
 
 /* Parede de tábuas com contorno grosso */
 .plank-wall {
@@ -608,13 +608,16 @@ button, input { font: inherit; color: inherit; }
   background: rgba(42, 7, 5, .85);
 }
 
+/* Escala dos pistoleiros em relação à altura da parede (pé no chão). */
+.enemy-area { --fig: .92; }
+
 /* Pistoleiro encostado na parede, esperando */
 .idle {
   position: absolute;
   z-index: 3;
   left: 50%;
   bottom: -1%;
-  height: 92%;
+  height: calc(var(--fig) * 100%);
   aspect-ratio: 120 / 300;
   transform: translateX(-50%);
   transition: opacity .3s, transform .3s;
@@ -623,30 +626,45 @@ button, input { font: inherit; color: inherit; }
 .idle .portrait { width: 100%; height: 100%; }
 .idle.gone { opacity: 0; transform: translateX(-50%) translateY(4%); }
 
-/* Pistoleiro espiando: a cabeça fica no centro da posição; ele "desliza"
- * de trás da parede para fora (a parede está na frente dele). */
-.peek {
+/* Posições: coluna (lado da parede) e linha (altura da cabeça de cada pose:
+ * em cima = de pé, meio = ajoelhado, embaixo = deitado). */
+.pos-c0 { left: 14%; }
+.pos-c1 { left: 86%; }
+.spot.pos-r0, .spot-anchor.pos-r0, .hole.pos-r0 { top: calc(100% - var(--fig) * 76%); }
+.spot.pos-r1, .spot-anchor.pos-r1, .hole.pos-r1 { top: calc(100% - var(--fig) * 56%); }
+.spot.pos-r2, .spot-anchor.pos-r2, .hole.pos-r2 { top: calc(100% - var(--fig) * 26.67%); }
+
+/* O mesmo pistoleiro de corpo inteiro saindo de trás da parede para atirar.
+ * Ele fica atrás da parede (z-index menor) e desliza para fora; a cabeça
+ * termina exatamente na posição escolhida. */
+.gunman {
   position: absolute;
+  bottom: 0;
   z-index: 1;
-  width: 50%;
-  aspect-ratio: 168 / 150;
   opacity: 0;
-  transition: transform .45s cubic-bezier(.2, 1.4, .4, 1), opacity .25s;
+  transition: transform .45s cubic-bezier(.2, 1.3, .4, 1), opacity .25s;
+  filter: drop-shadow(4px 4px 5px rgba(0, 0, 0, .3));
 }
-.enemy-area .peek { width: 46%; }
-.peek .portrait { width: 100%; height: 100%; overflow: visible; }
-.peek.side-left { transform: translate(-64%, -48%) translateX(55%); }
-.peek.side-right { transform: translate(-36%, -48%) scaleX(-1) translateX(55%); }
-.peek.out { opacity: 1; }
-.peek.side-left.out { transform: translate(-64%, -48%); }
-.peek.side-right.out { transform: translate(-36%, -48%) scaleX(-1); }
-.peek.side-left.fresh { animation: slide-left .4s cubic-bezier(.2, 1.4, .4, 1); }
-.peek.side-right.fresh { animation: slide-right .4s cubic-bezier(.2, 1.4, .4, 1); }
-@keyframes slide-left { from { transform: translate(-64%, -48%) translateX(55%); } }
-@keyframes slide-right { from { transform: translate(-36%, -48%) scaleX(-1) translateX(55%); } }
-.peek.knocked .portrait { transform: rotate(-75deg) translate(-10%, 30%); transform-origin: 70% 100%; filter: brightness(.6); transition: transform .45s ease-in, filter .45s; }
-.peek.knocked { opacity: 0; transition: opacity .5s .5s; }
-.peek.hurt .portrait { animation: hurt .7s; }
+.gunman .portrait { width: 100%; height: 100%; overflow: visible; }
+.pose-stand { height: calc(var(--fig) * 100%); aspect-ratio: 167 / 300; }
+.pose-kneel { height: calc(var(--fig) * 80%); aspect-ratio: 177 / 240; }
+.pose-prone { height: calc(var(--fig) * 43.33%); aspect-ratio: 221 / 130; }
+.gunman.side-left { transform: translateX(calc(-1 * var(--hx) + 32%)); }
+.gunman.side-right { transform: translateX(calc(var(--hx) - 132%)) scaleX(-1); }
+.gunman.out { opacity: 1; }
+.gunman.side-left.out { transform: translateX(calc(-1 * var(--hx))); }
+.gunman.side-right.out { transform: translateX(calc(var(--hx) - 100%)) scaleX(-1); }
+.gunman.side-left.fresh { animation: lean-left .45s cubic-bezier(.2, 1.3, .4, 1); }
+.gunman.side-right.fresh { animation: lean-right .45s cubic-bezier(.2, 1.3, .4, 1); }
+@keyframes lean-left { from { opacity: 0; transform: translateX(calc(-1 * var(--hx) + 32%)); } }
+@keyframes lean-right { from { opacity: 0; transform: translateX(calc(var(--hx) - 132%)) scaleX(-1); } }
+/* Coice do revólver no disparo */
+.gunman.recoil .portrait { animation: recoil .25s ease-out; transform-origin: 70% 60%; }
+@keyframes recoil { 30% { transform: rotate(4deg) translateX(3%); } }
+/* Caído: tomba para trás e some */
+.gunman.knocked .portrait { transform: rotate(75deg) translateY(8%); transform-origin: 70% 100%; filter: brightness(.6); transition: transform .5s ease-in, filter .5s; }
+.gunman.knocked { opacity: 0; transition: opacity .5s .7s; }
+.gunman.hurt .portrait { animation: hurt .7s; }
 @keyframes hurt {
   0%, 100% { filter: none; transform: none; }
   15% { filter: drop-shadow(0 0 8px #ff2a10) brightness(1.4) sepia(1) hue-rotate(-40deg) saturate(5); transform: translateX(-6px); }
@@ -672,7 +690,8 @@ button, input { font: inherit; color: inherit; }
 }
 .spot:hover { background: rgba(255, 204, 77, .45); }
 .enemy-area .spot { width: 34px; height: 34px; border-width: 2px; }
-.spot.own.selected { border: 3px solid var(--gold); background: transparent; box-shadow: 0 0 0 2px rgba(34, 20, 10, .6), 0 0 14px rgba(255, 204, 77, .8); }
+/* Posição escolhida: o próprio pistoleiro já mostra onde ele está */
+.spot.own.selected { border-color: transparent; background: transparent; box-shadow: none; }
 .spot.target.selected { border: 2px solid #ff3b1f; background: rgba(200, 40, 28, .35); }
 .spot.locked { opacity: .3; cursor: not-allowed; }
 .spot .crosshair { position: absolute; top: 50%; left: 50%; width: 150%; height: 150%; transform: translate(-50%, -50%); color: #fff1d6; filter: drop-shadow(0 0 4px #ff2a10); }
@@ -990,11 +1009,9 @@ button, input { font: inherit; color: inherit; }
   .game-layout { padding: 0 12px; gap: 12px; }
   /* Cena mais alta no celular para as paredes caberem */
   .scene { aspect-ratio: 4 / 5; border-width: 3px; }
-  .my-area { left: 6%; width: 52%; }
-  .enemy-area { --wall-l: 27%; left: 57%; top: 34%; width: 41%; height: 31%; }
-  .idle { height: 74%; }
-  .peek { width: 50%; }
-  .enemy-area .peek { width: 48%; }
+  .my-area { left: 15%; width: 48%; }
+  .enemy-area { --wall-l: 27%; left: 60%; top: 34%; width: 38%; height: 31%; }
+  .my-area { --fig: .66; }
   .spot { width: 40px; height: 40px; }
   .enemy-area .spot { width: 30px; height: 30px; }
   .scene-step { font-size: .9rem; padding: 8px 10px; }

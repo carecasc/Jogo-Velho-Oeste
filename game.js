@@ -522,22 +522,29 @@ const REVOLVER_LEFT =
   '<rect x="-24" y="87" width="11" height="11" rx="3" fill="#6b7076"/>' +
   '<path d="M-15 92 L-5 92 L-1 109 L-10 111 Z" fill="#6a3d1c"/></g>';
 
+/* Peças do corpo (casaco, colete, cinto e coldre), comuns a todas as poses.
+ * "coat" é o contorno do casaco, que muda de comprimento conforme a pose. */
+function bodyCore(L, coat) {
+  const vest = L.vest || '#2e2420';
+  let s = `<path d="${coat}" fill="${L.coat}" ${INK}/>`;
+  s += '<path d="M24 170 L28 210 M96 170 L92 210" stroke="rgba(0,0,0,.25)" stroke-width="2" fill="none"/>';
+  s += `<path d="M44 140 L44 212 L76 212 L76 140 Z" fill="${vest}" ${INK}/>`;
+  s += '<g fill="#c9a24a"><circle cx="60" cy="170" r="1.8"/><circle cx="60" cy="184" r="1.8"/><circle cx="60" cy="198" r="1.8"/></g>';
+  s += `<rect x="42" y="204" width="36" height="9" fill="#5a3519" ${INK}/>`;
+  s += '<rect x="56" y="203" width="9" height="11" rx="1" fill="none" stroke="#e8b64a" stroke-width="2"/>';
+  return s;
+}
+
 /* Pistoleiro inteiro encostado na parede, segurando o revólver (120 x 300). */
 function fullBodySVG(who) {
   const L = getChar(who.charId).look;
   const pants = L.pants || '#3b302a';
-  const vest = L.vest || '#2e2420';
   let s = '<svg class="portrait" viewBox="0 0 120 300" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">';
   // Pernas e botas
   s += `<path d="M42 208 L40 286 L58 286 L60 228 L62 286 L80 286 L78 208 Z" fill="${pants}" ${INK}/>`;
   s += `<path d="M36 282 L58 282 L59 298 L28 298 Q29 287 36 282 Z M62 282 L84 282 Q91 287 92 298 L61 298 Z" fill="#3a2414" ${INK}/>`;
   // Casaco longo, colete, cinto e coldre
-  s += `<path d="M10 140 L4 258 L42 262 L46 214 L74 214 L78 262 L116 258 L110 140 Z" fill="${L.coat}" ${INK}/>`;
-  s += '<path d="M24 170 L30 236 M96 170 L90 236" stroke="rgba(0,0,0,.25)" stroke-width="2" fill="none"/>';
-  s += `<path d="M44 140 L44 212 L76 212 L76 140 Z" fill="${vest}" ${INK}/>`;
-  s += '<g fill="#c9a24a"><circle cx="60" cy="170" r="1.8"/><circle cx="60" cy="184" r="1.8"/><circle cx="60" cy="198" r="1.8"/></g>';
-  s += `<rect x="42" y="204" width="36" height="9" fill="#5a3519" ${INK}/>`;
-  s += '<rect x="56" y="203" width="9" height="11" rx="1" fill="none" stroke="#e8b64a" stroke-width="2"/>';
+  s += bodyCore(L, 'M10 140 L4 258 L42 262 L46 214 L74 214 L78 262 L116 258 L110 140 Z');
   s += `<path d="M80 210 L93 210 L95 250 L84 252 Z" fill="#7a4a26" ${INK}/>`;
   s += `<path d="M82 200 L91 200 L91 212 L82 212 Z" fill="#5a3519" ${INK}/>`;
   // Busto (cabeça, chapéu, ombros)
@@ -552,16 +559,65 @@ function fullBodySVG(who) {
   return s;
 }
 
-/* Pistoleiro espiando pela lateral da parede, com o braço e o revólver
- * esticados para fora. Desenhado olhando para a esquerda; a CSS espelha
- * quando ele aparece do lado direito. viewBox: -48 0 168 150. */
-function peekSVG(who) {
-  let s = '<svg class="portrait" viewBox="-48 0 168 150" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">';
-  if (who.ghost && !who.charId) return s + GHOST_INNER + '</svg>';
+/* Poses de tiro: é o mesmo pistoleiro de corpo inteiro, saindo de trás da
+ * parede com o braço esticado. Cada altura tem uma pose:
+ * em cima = de pé, meio = ajoelhado, embaixo = deitado.
+ * vb: viewBox; hx: posição da cabeça na largura (%); tip: ponta do cano
+ * (frações da caixa), usada para o clarão do tiro. */
+const POSES = {
+  stand: { vb: '-37 0 167 300', hx: 58.1, tip: [0.036, 0.37] },
+  kneel: { vb: '-37 0 177 240', hx: 54.8, tip: [0.034, 0.46] },
+  prone: { vb: '-41 22 221 130', hx: 45.7, tip: [0.027, 0.9] },
+};
+const ROW_POSE = ['stand', 'kneel', 'prone'];
+
+/* Braço esticado com o revólver; (hx, hy) é a mão. */
+function gunArm(L, shoulder, hx, hy) {
+  const [sx, sy] = shoulder;
+  let s = `<path d="M${sx} ${sy - 8} L${hx + 4} ${hy - 7} L${hx} ${hy + 7} L${sx - 4} ${sy + 12} Z" fill="${L.coat}" ${INK}/>`;
+  s += `<g transform="translate(${hx + 11} ${hy - 97})">${REVOLVER_LEFT}</g>`;
+  s += `<circle cx="${hx}" cy="${hy}" r="7" fill="${L.skin}" ${INK}/>`;
+  return s;
+}
+
+/* Pistoleiro em pose de tiro, olhando para a esquerda (a CSS espelha
+ * quando ele sai pelo lado direito da parede). */
+function gunmanSVG(who, pose) {
+  const P = POSES[pose];
+  let s = `<svg class="portrait" viewBox="${P.vb}" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">`;
+  // Fantasma genérico: lençol flutuando na mesma altura da cabeça
+  if (who.ghost && !who.charId) return `${s}<g transform="translate(0 -12)">${GHOST_INNER}</g></svg>`;
   const L = getChar(who.charId).look;
-  s += `<path d="M34 112 L-10 90 L-14 103 L30 128 Z" fill="${L.coat}" ${INK}/>`;
-  s += REVOLVER_LEFT;
-  s += `<circle cx="-11" cy="97" r="7" fill="${L.skin}" ${INK}/>`;
+  const pants = L.pants || '#3b302a';
+  const boot = '#3a2414';
+
+  if (pose === 'stand') {
+    s += `<path d="M42 208 L36 286 L54 286 L60 228 L64 286 L82 286 L78 208 Z" fill="${pants}" ${INK}/>`;
+    s += `<path d="M32 282 L54 282 L55 298 L22 298 Q24 287 32 282 Z M64 282 L86 282 Q93 287 94 298 L63 298 Z" fill="${boot}" ${INK}/>`;
+    s += bodyCore(L, 'M10 140 L2 258 L40 262 L46 214 L74 214 L80 262 L118 258 L110 140 Z');
+  } else if (pose === 'kneel') {
+    // Perna de trás com o joelho no chão; perna da frente dobrada
+    s += `<path d="M64 204 L80 234 L98 230 L82 200 Z" fill="${pants}" ${INK}/>`;
+    s += `<path d="M82 226 L126 226 L126 240 L82 240 Z" fill="${pants}" ${INK}/>`;
+    s += `<path d="M118 220 L136 222 L138 240 L116 240 Z" fill="${boot}" ${INK}/>`;
+    s += bodyCore(L, 'M10 140 L6 222 L40 226 L46 210 L74 210 L80 226 L114 222 L110 140 Z');
+    s += `<path d="M46 200 L8 198 L8 216 L50 218 Z" fill="${pants}" ${INK}/>`;
+    s += `<path d="M8 204 L2 232 L20 232 L26 208 Z" fill="${pants}" ${INK}/>`;
+    s += `<path d="M-4 228 L22 228 L24 240 L-10 240 Q-9 232 -4 228 Z" fill="${boot}" ${INK}/>`;
+  } else {
+    // Deitado de bruços: o corpo segue para trás da parede
+    s += `<path d="M120 126 L184 124 L184 148 L120 152 Z" fill="${pants}" ${INK}/>`;
+    s += `<path d="M58 116 L128 120 L130 152 L58 152 Z" fill="${L.coat}" ${INK}/>`;
+    s += `<rect x="112" y="120" width="8" height="32" fill="#5a3519" ${INK}/>`;
+  }
+
+  // Braço livre (do lado de dentro da parede)
+  if (pose !== 'prone') {
+    s += `<path d="M98 128 Q112 168 104 198 L92 198 Q98 168 86 136 Z" fill="${L.coat}" ${INK}/>`;
+    s += `<ellipse cx="98" cy="202" rx="7" ry="6" fill="${L.skin}" ${INK}/>`;
+  }
+  // Braço do revólver, esticado para fora da parede
+  s += pose === 'prone' ? gunArm(L, [30, 136], 0, 142) : gunArm(L, [30, 124], 4, 114);
   s += portraitInner(L);
   return s + '</svg>';
 }
@@ -1105,19 +1161,18 @@ function showCenter(id) {
  * ao fundo, à direita, a parede do rival. As 6 posições ficam nas laterais
  * de cada parede (esquerda/direita x em cima/meio/embaixo). */
 
-/* Centro de cada posição, em % da área da parede. */
-const SPOT_X = [14, 86];
-const SPOT_Y_MINE = [22, 48, 74];
-const SPOT_Y_ENEMY = [20, 50, 80];
-
-function spotStyle(i, ys) {
-  return `left:${SPOT_X[i % 2]}%;top:${ys[Math.floor(i / 2)]}%`;
+/* Classes de posição: coluna (esquerda/direita) e linha (em cima/meio/embaixo).
+ * A CSS coloca cada marcador na altura da cabeça da pose daquela linha. */
+function posClass(i) {
+  return `pos-c${i % 2} pos-r${Math.floor(i / 2)}`;
 }
 
-/* Pistoleiro espiando por um lado da parede. */
-function peekHTML(who, i, ys, extra = '') {
+/* Pistoleiro de corpo inteiro saindo por um lado da parede. */
+function gunmanHTML(who, i, extra = '') {
   const side = i % 2 === 0 ? 'side-left' : 'side-right';
-  return `<div class="peek ${side} ${who.ghost ? 'ghosty' : ''} ${extra}" style="${spotStyle(i, ys)}">${peekSVG(who)}</div>`;
+  const pose = ROW_POSE[Math.floor(i / 2)];
+  return `<div class="gunman pose-${pose} ${side} ${posClass(i)} ${who.ghost ? 'ghosty' : ''} ${extra}"
+               data-pose="${pose}" style="--hx:${POSES[pose].hx}%">${gunmanSVG(who, pose)}</div>`;
 }
 
 /* Monta a cena. mode 'choose': botões para escolher; 'reveal': só desenho. */
@@ -1132,19 +1187,19 @@ function sceneHTML({ mode, self, opp, pos = null, targets = [], oppPos = null })
       // Números dos tiros que vão nesta posição (ex.: "1", "2" ou "1+2")
       const shotsHere = targets.map((t, k) => (t === i ? k + 1 : null)).filter(Boolean);
       const tgt = shotsHere.length > 0;
-      mine += `<button type="button" class="spot own ${own ? 'selected' : ''}" style="${spotStyle(i, SPOT_Y_MINE)}"
+      mine += `<button type="button" class="spot own ${posClass(i)} ${own ? 'selected' : ''}"
                  data-own-slot="${i}" aria-pressed="${own}" aria-label="Aparecer em ${posName(i)}"></button>`;
-      enemy += `<button type="button" class="spot target ${tgt ? 'selected' : ''} ${pos === null ? 'locked' : ''}" style="${spotStyle(i, SPOT_Y_ENEMY)}"
+      enemy += `<button type="button" class="spot target ${posClass(i)} ${tgt ? 'selected' : ''} ${pos === null ? 'locked' : ''}"
                   data-target-slot="${i}" aria-pressed="${tgt}" aria-label="Atirar em ${posName(i)}">${tgt ? CROSSHAIR_SVG + (multi ? `<span class="shot-num">${shotsHere.join('+')}</span>` : '') : ''}</button>`;
     } else {
       // Marcadores invisíveis que servem de mira para os efeitos
-      mine += `<span class="spot-anchor" style="${spotStyle(i, SPOT_Y_MINE)}"></span>`;
-      enemy += `<span class="spot-anchor" style="${spotStyle(i, SPOT_Y_ENEMY)}"></span>`;
+      mine += `<span class="spot-anchor ${posClass(i)}"></span>`;
+      enemy += `<span class="spot-anchor ${posClass(i)}"></span>`;
     }
   }
-  const myPeek = pos !== null ? peekHTML(self, pos, SPOT_Y_MINE, choosing ? 'out' : '') : '';
+  const myPeek = pos !== null ? gunmanHTML(self, pos, choosing ? 'out' : '') : '';
   const idle = !choosing || pos === null ? `<div class="idle">${fullBodySVG(self)}</div>` : '';
-  const oppPeek = oppPos !== null ? peekHTML(opp, oppPos, SPOT_Y_ENEMY) : '';
+  const oppPeek = oppPos !== null ? gunmanHTML(opp, oppPos) : '';
   return `
     <div class="scene-bg">${TOWN_SVG.replace(/town-/g, `${mode}-town-`)}</div>
     <div class="wall-area enemy-area">
@@ -1181,7 +1236,7 @@ function renderChoice() {
   scene.innerHTML = sceneHTML({ mode: 'choose', self, opp, pos: c.pos, targets: c.targets });
   scene.classList.toggle('step-1', c.pos === null);
   scene.classList.toggle('step-2', c.pos !== null && placed < shots);
-  if (client.freshSlot === 'own') scene.querySelector('.peek').classList.add('fresh');
+  if (client.freshSlot === 'own') scene.querySelector('.gunman').classList.add('fresh');
   if (client.freshSlot !== null && client.freshSlot !== 'own') {
     const t = scene.querySelector(`[data-target-slot="${client.freshSlot}"]`);
     if (t) t.classList.add('fresh');
@@ -1385,28 +1440,35 @@ function splinters(x, y, scale = 1) {
 }
 
 /* Buraco de bala na borda da parede, ao lado da posição errada. */
-function bulletHole(area, pos, ys) {
+function bulletHole(area, pos) {
   const hole = document.createElement('span');
-  hole.className = 'hole';
+  hole.className = `hole pos-r${Math.floor(pos / 2)}`;
   const edge = pos % 2 === 0 ? 'calc(var(--wall-l) + 6px)' : 'calc(100% - var(--wall-l) - 6px)';
   hole.style.left = edge;
-  hole.style.top = `${ys[Math.floor(pos / 2)] + (Math.random() - 0.5) * 8}%`;
+  hole.style.marginTop = `${(Math.random() - 0.5) * 24}px`;
   $('arena-scene').querySelector(`.${area}`).appendChild(hole);
 }
 
 /* Um disparo: do revólver de quem atira até a posição escolhida. */
 function fireShot(fromArea, toArea, shooter) {
   const arena = $('arena');
-  const fig = $('arena-scene').querySelector(`.${fromArea} .peek`);
+  const fig = $('arena-scene').querySelector(`.${fromArea} .gunman`);
   const r = fig.getBoundingClientRect();
   const b = arena.getBoundingClientRect();
   const left = fig.classList.contains('side-left');
-  // Ponta do cano: borda de fora da figura, na altura da mão
-  const from = { x: (left ? r.left : r.right) - b.left, y: r.top - b.top + r.height * 0.63 };
+  // Ponta do cano do revólver (depende da pose)
+  const [tipX, tipY] = POSES[fig.dataset.pose].tip;
+  const from = {
+    x: (left ? r.left + r.width * tipX : r.right - r.width * tipX) - b.left,
+    y: r.top - b.top + r.height * tipY,
+  };
   const to = centerIn(anchorOf(toArea, shooter.target), arena);
   const tx = to.x + (Math.random() - 0.5) * 10;
   const ty = to.y + (Math.random() - 0.5) * 10;
 
+  fig.classList.remove('recoil');
+  void fig.offsetWidth;
+  fig.classList.add('recoil');
   fx('muzzle', from.x, from.y, 260);
   const dx = tx - from.x;
   const dy = ty - from.y;
@@ -1421,14 +1483,14 @@ function fireShot(fromArea, toArea, shooter) {
   setTimeout(() => {
     const far = toArea === 'enemy-area';
     if (shooter.hit) {
-      const victim = $('arena-scene').querySelector(`.${toArea} .peek`);
+      const victim = $('arena-scene').querySelector(`.${toArea} .gunman`);
       victim.classList.remove('hurt');
       void victim.offsetWidth;
       victim.classList.add('hurt');
       fx('hit-burst', to.x, to.y - (far ? 26 : 50), 1300, `${far ? 'ACERTOU!' : 'AI!'} −${shooter.dmg}`);
       Sound.ding();
     } else {
-      bulletHole(toArea, shooter.target, far ? SPOT_Y_ENEMY : SPOT_Y_MINE);
+      bulletHole(toArea, shooter.target);
       splinters(tx, ty, far ? 0.6 : 1.1);
       if (Math.random() < 0.6) Sound.ricochet();
     }
@@ -1462,7 +1524,7 @@ async function runReveal(duel) {
 
   // Os dois saem de trás da parede ao mesmo tempo
   scene.querySelector('.idle').classList.add('gone');
-  scene.querySelectorAll('.peek').forEach((p) => p.classList.add('out'));
+  scene.querySelectorAll('.gunman').forEach((p) => p.classList.add('out'));
   Sound.pop();
   await sleep(750);
 
@@ -1478,8 +1540,8 @@ async function runReveal(duel) {
 
   // Quem morreu no duelo cai
   const elim = v.results.eliminated;
-  if (oppSide.id && elim.includes(oppSide.id)) scene.querySelector('.enemy-area .peek').classList.add('knocked');
-  if (elim.includes(client.me)) scene.querySelector('.my-area .peek').classList.add('knocked');
+  if (oppSide.id && elim.includes(oppSide.id)) scene.querySelector('.enemy-area .gunman').classList.add('knocked');
+  if (elim.includes(client.me)) scene.querySelector('.my-area .gunman').classList.add('knocked');
 
   const mineHit = mineSide.hits > 0;
   const oppHit = oppSide.hits > 0;

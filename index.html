@@ -92,6 +92,7 @@
     <header class="game-header">
       <div class="score-box"><span class="score-label">Rodada</span><b id="round-num" class="lcd">1</b></div>
       <div class="score-box timer-box"><span class="score-label">Tempo</span><b id="timer" class="lcd">30</b></div>
+      <div id="gold-box" class="score-box gold-box" hidden><span class="score-label">Ouro</span><b id="gold" class="lcd">0</b></div>
       <div id="duel-label" class="duel-label"></div>
     </header>
 
@@ -105,6 +106,7 @@
         <!-- Escolha secreta -->
         <div id="choice-panel" class="duel-panel" hidden>
           <p id="choice-step" class="scene-step"></p>
+          <div id="my-cards" class="my-cards"></div>
           <div id="choice-scene" class="scene lights"></div>
           <p id="choice-status" class="choice-status" role="status"></p>
           <button id="btn-confirm" class="btn btn-big btn-confirm" type="button">Atirar!</button>
@@ -161,6 +163,21 @@
       <p id="over-wait" class="hint"></p>
     </div>
   </section>
+
+  <!-- Loja de cartas (sobreposta ao duelo, da 2ª rodada em diante) -->
+  <div id="shop" class="shop-overlay" role="dialog" aria-modal="true" aria-labelledby="shop-title" hidden>
+    <div class="shop-box">
+      <div class="shop-head">
+        <span id="shop-round" class="shop-round">Rodada 2</span>
+        <h2 id="shop-title">Mesa de Pôquer</h2>
+        <p class="shop-sub">Escolha seus bônus para este duelo</p>
+      </div>
+      <div id="shop-gold" class="shop-gold"></div>
+      <div id="shop-cards" class="shop-cards"></div>
+      <p id="shop-status" class="shop-status" role="status"></p>
+      <button id="btn-shop-done" class="btn btn-big" type="button">Ir para o duelo</button>
+    </div>
+  </div>
 
   <script src="game.js"></script>
 </body>

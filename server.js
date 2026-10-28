@@ -33,6 +33,15 @@ const LOBBY_GRACE_MS = 20000;    // quem cai no saguão tem esse tempo para volt
 const EMPTY_ROOM_MS = 10 * 60000;
 const MAX_MESSAGE = 8 * 1024;
 const CHAR_IDS = ['xerife', 'foradalei', 'cacador', 'pistoleira', 'garimpeiro', 'pregador', 'kid', 'dama'];
+const DEFAULT_SLOT = 0;          // sem escolha: "Em cima · Esquerda"
+
+/* Cartas bônus da loja (a partir da 2ª rodada).
+ * K e J valem só para a rodada em que são compradas; A é permanente. */
+const CARDS = {
+  K: { cost: 1 },   // +1 de dano nesta rodada
+  J: { cost: 1 },   // 1 tiro extra nesta rodada
+  A: { cost: 3 },   // +1 de dano para sempre
+};
 
 /* =====================================================================
  * 2. SERVIDOR HTTP — só entrega os arquivos do jogo (lista fechada)
@@ -273,6 +282,11 @@ function addPlayer(room, conn, name) {
     place: null,
     choice: null,
     left: false,
+    gold: 0,
+    hitsLast: 0,
+    perm: 0,
+    bought: [],
+    shopDone: true,
     conn: null,
     connected: false,
     dropTimer: null,
@@ -326,10 +340,18 @@ function publicState(room, viewer) {
     now: Date.now(),
     deadline: room.deadline,
     you: viewer.id,
-    mine: viewer.choice,
+    mine: {
+      choice: viewer.choice,
+      gold: viewer.gold,
+      bought: viewer.bought,
+      shopDone: viewer.shopDone,
+      shots: shotsOf(viewer),
+      dmg: damageOf(viewer),
+      perm: viewer.perm,
+    },
     players: room.players.map((p) => ({
       id: p.id, name: p.name, charId: p.charId, hp: p.hp, alive: p.alive,
-      place: p.place, connected: p.connected, left: p.left, submitted: !!p.choice,
+      place: p.place, connected: p.connected, left: p.left, submitted: !!p.choice, perm: p.perm,
     })),
     pairings: room.phase === 'choose' || room.phase === 'reveal' ? room.pairings : [],
     results: room.phase === 'reveal' || room.phase === 'over' ? room.results : null,
@@ -346,6 +368,23 @@ function broadcast(room) {
  * 5. LÓGICA DA PARTIDA
  * ===================================================================== */
 
+/* Zera ouro e cartas (início de partida). */
+function resetBuild(p) {
+  p.gold = 0;
+  p.hitsLast = 0;
+  p.perm = 0;
+  p.bought = [];
+  p.shopDone = true;
+}
+
+function shotsOf(p) {
+  return 1 + (p.bought.includes('J') ? 1 : 0);
+}
+
+function damageOf(p) {
+  return 1 + (p.bought.includes('K') ? 1 : 0) + p.perm;
+}
+
 function startGame(room) {
   room.players = room.players.filter((p) => p.connected);
   room.players.forEach((p) => {
@@ -354,6 +393,7 @@ function startGame(room) {
     p.place = null;
     p.choice = null;
     p.left = false;
+    resetBuild(p);
   });
   ensureHost(room);
   room.round = 0;
@@ -368,7 +408,16 @@ function nextRound(room) {
   room.round += 1;
   room.phase = 'choose';
   room.results = null;
-  room.players.forEach((p) => { p.choice = null; });
+  room.players.forEach((p) => {
+    p.choice = null;
+    p.bought = [];
+    // Da 2ª rodada em diante: 1 de ouro + 1 por acerto na rodada anterior.
+    // O ouro não acumula e a loja exige comprar pelo menos uma carta.
+    const shop = room.round >= 2 && p.alive;
+    p.gold = shop ? 1 + p.hitsLast : 0;
+    p.shopDone = !shop;
+    p.hitsLast = 0;
+  });
   room.pairings = makePairings(room);
   room.deadline = Date.now() + CHOOSE_MS;
   room.timer = setTimeout(() => resolveRound(room), CHOOSE_MS);
@@ -435,14 +484,66 @@ function randomSlot() {
   return crypto.randomInt(SLOTS);
 }
 
-/* Completa jogadas vazias ou parciais com escolhas aleatórias. */
-function finalChoice(choice) {
+/* Quem não termina a jogada aparece e atira em "Em cima · Esquerda". */
+function finalChoice(choice, shots) {
   const c = choice || {};
-  const auto = !Number.isInteger(c.pos) || !Number.isInteger(c.target);
+  const given = Array.isArray(c.targets) ? c.targets : [];
+  const targets = [];
+  for (let k = 0; k < shots; k++) targets.push(Number.isInteger(given[k]) ? given[k] : DEFAULT_SLOT);
+  const auto = !Number.isInteger(c.pos) || given.filter(Number.isInteger).length < shots;
+  return { pos: Number.isInteger(c.pos) ? c.pos : DEFAULT_SLOT, targets, auto };
+}
+
+/* Loja não concluída no fim do tempo: compra o J (tiro extra) se nada foi comprado. */
+function autoShop(p) {
+  if (p.shopDone) return;
+  if (p.bought.length === 0 && p.gold >= CARDS.J.cost) {
+    p.gold -= CARDS.J.cost;
+    p.bought.push('J');
+  }
+  p.shopDone = true;
+}
+
+/* Um lado do duelo: jogador vivo ou fantasma (que joga ao acaso). */
+function duelSide(p) {
+  if (p && p.alive) {
+    return { real: true, p, ...finalChoice(p.choice, shotsOf(p)), dmg: damageOf(p), cards: p.bought.slice(), perm: p.perm };
+  }
+  return { real: false, p: null, pos: randomSlot(), targets: [randomSlot()], auto: false, dmg: 1, cards: [], perm: 0 };
+}
+
+/* Resolve um duelo tiro a tiro. Os tiros de mesmo número saem juntos;
+ * quem morre num disparo não faz o próximo. */
+function resolveDuel(pr) {
+  const a = duelSide(pr.aPlayer);
+  const b = duelSide(pr.bPlayer);
+  const volleys = [];
+  const hits = { a: 0, b: 0 };
+  const dead = (side) => side.real && side.p.hp <= 0;
+  const total = Math.max(a.targets.length, b.targets.length);
+  for (let k = 0; k < total; k++) {
+    if (dead(a) || dead(b)) break;
+    const volley = [];
+    const aHit = k < a.targets.length && a.targets[k] === b.pos;
+    const bHit = k < b.targets.length && b.targets[k] === a.pos;
+    if (k < a.targets.length) volley.push({ by: 'a', target: a.targets[k], hit: aHit, dmg: aHit ? a.dmg : 0 });
+    if (k < b.targets.length) volley.push({ by: 'b', target: b.targets[k], hit: bHit, dmg: bHit ? b.dmg : 0 });
+    // Dano aplicado ao mesmo tempo (fantasmas não perdem vida)
+    if (aHit) { hits.a += 1; if (b.real) b.p.hp -= a.dmg; }
+    if (bHit) { hits.b += 1; if (a.real) a.p.hp -= b.dmg; }
+    volleys.push(volley);
+  }
+  if (a.real) a.p.hitsLast = hits.a;
+  if (b.real) b.p.hitsLast = hits.b;
+  const pub = (side, id, extra) => ({
+    id, ...extra, pos: side.pos, targets: side.targets, auto: side.auto,
+    dmg: side.dmg, cards: side.cards, perm: side.perm,
+    hits: hits[id === pr.a ? 'a' : 'b'],
+  });
   return {
-    pos: Number.isInteger(c.pos) ? c.pos : randomSlot(),
-    target: Number.isInteger(c.target) ? c.target : randomSlot(),
-    auto,
+    a: pub(a, pr.a, {}),
+    b: pub(b, pr.b, { ghost: pr.ghost }),
+    volleys,
   };
 }
 
@@ -457,22 +558,11 @@ function resolveRound(room) {
   if (room.phase !== 'choose') return;
   clearTimeout(room.timer);
 
+  room.players.forEach((p) => { if (p.alive) autoShop(p); });
   const duels = room.pairings.map((pr) => {
-    const A = getPlayer(room, pr.a);
-    const B = pr.b ? getPlayer(room, pr.b) : null;
-    const ca = finalChoice(A && A.alive ? A.choice : null);
-    const cb = finalChoice(B && B.alive ? B.choice : null);
-    const hitA = ca.target === cb.pos;  // A acertou B
-    const hitB = cb.target === ca.pos;  // B acertou A
-    // Fantasmas (e quem abandonou) não perdem vida, mas ainda atiram
-    if (hitA && B && B.alive) B.hp -= 1;
-    if (hitB && A && A.alive) A.hp -= 1;
     pushHistory(room, pr.a, pr.b || 'ghost');
     if (pr.b) pushHistory(room, pr.b, pr.a);
-    return {
-      a: { id: pr.a, ...ca, hit: hitA },
-      b: { id: pr.b, ghost: pr.ghost, ...cb, hit: hitB },
-    };
+    return resolveDuel({ ...pr, aPlayer: getPlayer(room, pr.a), bPlayer: pr.b ? getPlayer(room, pr.b) : null });
   });
 
   const eliminated = eliminateDead(room);
@@ -524,6 +614,7 @@ function backToLobby(room) {
     p.alive = true;
     p.place = null;
     p.choice = null;
+    resetBuild(p);
   });
   broadcast(room);
 }
@@ -696,13 +787,39 @@ function handle(conn, msg) {
       return;
     }
 
+    case 'buy': {
+      if (room.phase !== 'choose' || !player.alive || player.shopDone) return;
+      const card = CARDS[msg.card];
+      if (!card || player.bought.includes(msg.card)) return;
+      if (player.gold < card.cost) return sendError(conn, 'Ouro insuficiente para essa carta.');
+      player.gold -= card.cost;
+      player.bought.push(msg.card);
+      if (msg.card === 'A') player.perm += 1;
+      broadcast(room);
+      return;
+    }
+
+    case 'shop-done': {
+      if (room.phase !== 'choose' || !player.alive || player.shopDone) return;
+      if (player.bought.length === 0) return sendError(conn, 'Compre pelo menos uma carta.');
+      player.shopDone = true;
+      broadcast(room);
+      return;
+    }
+
     case 'choice': {
       if (room.phase !== 'choose' || !player.alive || player.choice) return;
+      // No envio automático do fim do tempo, a loja é concluída sozinha
+      if (msg.timeout) autoShop(player);
+      if (!player.shopDone) return sendError(conn, 'Compre pelo menos uma carta antes de atirar.');
+      const shots = shotsOf(player);
       const pos = isSlot(msg.pos) ? msg.pos : null;
-      const target = isSlot(msg.target) ? msg.target : null;
+      const raw = Array.isArray(msg.targets) ? msg.targets.slice(0, shots) : [];
+      const targets = raw.map((t) => (isSlot(t) ? t : null));
+      const complete = pos !== null && targets.length === shots && targets.every((t) => t !== null);
       // Escolha parcial só é aceita no envio automático do fim do tempo
-      if ((pos === null || target === null) && !msg.timeout) return sendError(conn, 'Escolha onde aparecer e onde atirar.');
-      player.choice = { pos, target };
+      if (!complete && !msg.timeout) return sendError(conn, 'Escolha onde aparecer e onde vão os tiros.');
+      player.choice = { pos, targets };
       broadcast(room);
       checkAllSubmitted(room);
       return;

@@ -778,6 +778,145 @@ button, input { font: inherit; color: inherit; }
 .smoke { animation: smoke 2.4s ease-in-out infinite; transform-origin: 83px 89px; }
 @keyframes smoke { 50% { opacity: .3; transform: translateY(-2px) skewX(8deg); } }
 
+/* ---------- Ouro, cartas ativas e marcadores de tiro ---------- */
+.gold-box .lcd { color: var(--gold); text-shadow: 0 0 8px rgba(255, 204, 77, .9); }
+.coins { display: inline-flex; gap: 2px; vertical-align: middle; }
+.coin {
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  font-family: var(--font-title);
+  font-size: .62rem;
+  color: #7a4a10;
+  background: radial-gradient(circle at 35% 30%, #fff3b0, var(--gold) 55%, #c98a1a);
+  border: 1.5px solid #7a4a10;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .4);
+}
+.gold-note { display: inline-flex; align-items: center; gap: 6px; margin-top: 6px; font-size: .92rem; }
+.mini-card {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 1px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: var(--font-title);
+  font-size: .9rem;
+  line-height: 1.1;
+  background: #fffaf0;
+  border: 1.5px solid #2a1a10;
+  box-shadow: 1px 2px 0 rgba(0, 0, 0, .35);
+  white-space: nowrap;
+}
+.mini-card small { font-size: .65rem; color: var(--ink); }
+.mini-card.tiny { font-size: .7rem; padding: 1px 4px; }
+.my-cards { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 8px; max-width: 900px; margin: 0 auto 10px; }
+.my-cards:empty { display: none; }
+.my-cards-text { font-size: .92rem; text-shadow: 0 1px 2px #000; }
+.lb-row { display: flex; align-items: center; gap: 6px; }
+.lb-ace { font-family: var(--font-title); font-size: .7rem; padding: 0 4px; border-radius: 3px; color: #1d1410; background: #fffaf0; border: 1px solid #c9a24a; }
+.shot-num {
+  position: absolute;
+  right: -10px;
+  bottom: -8px;
+  z-index: 2;
+  padding: 1px 5px;
+  border-radius: 8px;
+  font-family: var(--font-arcade);
+  font-size: .5rem;
+  color: var(--gold);
+  background: #2a0705;
+  border: 1.5px solid var(--gold);
+  white-space: nowrap;
+}
+
+/* ---------- Loja de cartas (mesa de pôquer sobreposta ao duelo) ---------- */
+.shop-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 70px 12px 16px;
+  overflow-y: auto;
+  background: rgba(15, 6, 10, .62);
+  backdrop-filter: blur(2px);
+}
+.shop-overlay[hidden] { display: none; }
+.shop-box {
+  width: 100%;
+  max-width: 760px;
+  margin: auto;
+  padding: 18px 18px 22px;
+  text-align: center;
+  border-radius: 22px;
+  /* Feltro verde com borda de madeira, como numa mesa de saloon */
+  background:
+    radial-gradient(ellipse at 50% 30%, rgba(255, 255, 255, .12), transparent 60%),
+    repeating-linear-gradient(45deg, rgba(0, 0, 0, .04) 0 2px, transparent 2px 5px),
+    #1f6a3e;
+  border: 10px solid var(--wood);
+  box-shadow: inset 0 0 0 3px var(--gold), inset 0 0 40px rgba(0, 0, 0, .45), 0 20px 50px rgba(0, 0, 0, .7);
+  animation: drop-in .35s cubic-bezier(.2, 1.4, .4, 1);
+}
+.shop-round { font-family: var(--font-arcade); font-size: .6rem; color: var(--gold); letter-spacing: .1em; }
+.shop-head h2 { font-family: var(--font-title); font-size: clamp(1.5rem, 5vw, 2.2rem); color: var(--cream); text-shadow: 0 3px 0 #0c2a17; margin: 4px 0; }
+.shop-sub { margin: 0 0 10px; color: #d6ecd9; }
+.shop-gold {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 14px;
+  margin-bottom: 14px;
+  border-radius: 20px;
+  color: var(--cream);
+  background: rgba(0, 0, 0, .35);
+}
+.shop-gold .coin { width: 22px; height: 22px; font-size: .75rem; }
+.shop-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.shop-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 6px 10px;
+  border: 0;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, .18);
+  color: var(--cream);
+  cursor: pointer;
+  transition: transform .2s, background .2s;
+  touch-action: manipulation;
+}
+.shop-card:hover:not(:disabled) { transform: translateY(-6px) rotate(-2deg); background: rgba(255, 255, 255, .1); }
+.shop-card-art { position: relative; width: 100%; max-width: 150px; filter: drop-shadow(0 6px 8px rgba(0, 0, 0, .5)); }
+.shop-card-art .poker-svg { display: block; width: 100%; height: auto; }
+.shop-card-name { font-family: var(--font-title); font-size: 1rem; margin-top: 4px; }
+.shop-card-effect { font-size: .85rem; line-height: 1.2; }
+.shop-card-dur { font-size: .7rem; text-transform: uppercase; letter-spacing: .05em; padding: 1px 8px; border-radius: 8px; background: rgba(0, 0, 0, .3); }
+.shop-card-dur.perm { color: #1d1410; background: var(--gold); }
+.shop-card-cost { display: inline-flex; align-items: center; gap: 4px; font-size: .85rem; }
+.shop-card.bought .shop-card-art { transform: translateY(-4px); }
+.shop-card.bought .poker-svg { outline: 4px solid var(--gold); outline-offset: 2px; border-radius: 9px; }
+.shop-card:disabled { cursor: default; }
+.shop-card.poor { opacity: .5; filter: grayscale(.6); }
+.sold {
+  position: absolute;
+  top: 44%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(-14deg);
+  padding: 2px 10px;
+  font-family: var(--font-title);
+  font-size: .95rem;
+  color: #fff;
+  background: var(--red);
+  border: 2px solid #2a0705;
+  border-radius: 6px;
+}
+.shop-status { min-height: 1.3em; margin: 14px 0 12px; color: #e9f5ea; }
+
 /* ---------- Resultados e listas de duelos ---------- */
 .results-panel { animation: drop-in .35s cubic-bezier(.2, 1.4, .4, 1); }
 .results-me { font-size: 1.05rem; margin: 10px 0; padding: 10px; border-radius: 8px; background: rgba(255, 255, 255, .55); }
@@ -859,6 +998,14 @@ button, input { font: inherit; color: inherit; }
   .spot { width: 40px; height: 40px; }
   .enemy-area .spot { width: 30px; height: 30px; }
   .scene-step { font-size: .9rem; padding: 8px 10px; }
+  .shop-box { padding: 14px 10px 18px; border-width: 7px; }
+  .shop-cards { gap: 6px; }
+  .shop-card { padding: 6px 2px 8px; }
+  .shop-card-name { font-size: .8rem; }
+  .shop-card-effect { font-size: .72rem; }
+  .shop-card-dur { font-size: .6rem; padding: 1px 4px; }
+  .shop-card-cost { font-size: .72rem; }
+  .shop-card-cost .coin { width: 14px; height: 14px; font-size: .5rem; }
   .char-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
   .char-stage { height: 110px; }
   .char-quote { display: none; }

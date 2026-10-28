@@ -100,7 +100,7 @@ const client = {
   me: null,              // meu id
   offset: 0,             // diferença entre o relógio do servidor e o local
   screen: 'screen-home',
-  choice: { pos: null, target: null },   // escolha em andamento (local)
+  choice: { pos: null, targets: [] },   // escolha em andamento (local)
   choiceRound: 0,
   freshSlot: null,       // casa recém-marcada (só ela anima)
   autoSent: false,       // envio automático no fim do tempo
@@ -621,6 +621,111 @@ const TOWN_SVG = `
   </g>
 </svg>`;
 
+/* ---------- Cartas bônus (baralho de pôquer) ---------- */
+
+const CARD_INFO = {
+  K: { rank: 'K', suit: '♥', color: '#b3241a', name: 'Rei de Copas', cost: 1, charId: 'xerife',
+       effect: '+1 de dano nos seus tiros', dur: 'Só nesta rodada' },
+  J: { rank: 'J', suit: '♦', color: '#b3241a', name: 'Valete de Ouros', cost: 1, charId: 'kid',
+       effect: '1 tiro extra', dur: 'Só nesta rodada' },
+  A: { rank: 'A', suit: '♠', color: '#1d1410', name: 'Ás de Espadas', cost: 3,
+       effect: '+1 de dano nos seus tiros', dur: 'Permanente' },
+};
+
+/* Carta de pôquer em SVG (100 x 140). K e J são figuras espelhadas,
+ * como no baralho de verdade, com os pistoleiros do jogo; o A é um
+ * grande espadas com dois revólveres cruzados. */
+function pokerCardSVG(id) {
+  const c = CARD_INFO[id];
+  const font = 'font-family="Rye, Georgia, serif"';
+  let s = `<svg class="poker-svg" viewBox="0 0 100 140" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">`;
+  s += `<rect x="1" y="1" width="98" height="138" rx="8" fill="#fffaf0" stroke="#2a1a10" stroke-width="2"/>`;
+  const corner = `<text x="9" y="19" ${font} font-size="15" fill="${c.color}" text-anchor="middle">${c.rank}</text>` +
+    `<text x="9" y="31" font-family="Georgia, serif" font-size="12" fill="${c.color}" text-anchor="middle">${c.suit}</text>`;
+  s += corner + `<g transform="rotate(180 50 70)">${corner}</g>`;
+
+  if (id === 'A') {
+    s += `<rect x="18" y="12" width="64" height="116" rx="4" fill="none" stroke="${c.color}" stroke-width=".8" stroke-dasharray="2 2"/>`;
+    s += `<circle cx="50" cy="72" r="30" fill="#f3e2bd" stroke="#c9a24a" stroke-width="2"/>`;
+    s += `<g transform="translate(50 76) rotate(28) scale(.85) translate(24 -97)">${REVOLVER_LEFT}</g>`;
+    s += `<g transform="translate(50 76) scale(-1 1) rotate(28) scale(.85) translate(24 -97)">${REVOLVER_LEFT}</g>`;
+    s += `<path d="M50 46 C44 57 30 63 30 76 C30 86 41 90 48 84 C47 92 44 97 39 100 L61 100 C56 97 53 92 52 84 C59 90 70 86 70 76 C70 63 56 57 50 46 Z" fill="${c.color}" stroke="#c9a24a" stroke-width="1.2"/>`;
+    s += `<path d="M44 66 Q50 58 56 66" stroke="#c9a24a" stroke-width="1.2" fill="none"/>`;
+    s += `<text x="50" y="122" ${font} font-size="7" fill="${c.color}" text-anchor="middle">PERMANENTE</text>`;
+  } else {
+    const clip = `clip-${id}`;
+    const look = getChar(c.charId).look;
+    s += `<defs><clipPath id="${clip}"><rect x="17" y="12" width="66" height="58"/></clipPath></defs>`;
+    s += `<rect x="17" y="12" width="66" height="116" fill="${id === 'K' ? '#f6dcc0' : '#dfe9e4'}" stroke="${c.color}" stroke-width="1.2"/>`;
+    // Metade de cima: figura; metade de baixo: a mesma figura invertida
+    const half = `<g clip-path="url(#${clip})"><rect x="17" y="12" width="66" height="58" fill="${id === 'K' ? '#f6dcc0' : '#dfe9e4'}"/>` +
+      `<path d="M17 12 L83 70 M83 12 L17 70" stroke="${c.color}" stroke-width=".5" opacity=".35"/>` +
+      `<g transform="translate(20 4) scale(.5)">${portraitInner(look)}</g>` +
+      (id === 'K' ? '<path d="M40 16 L44 9 L47 14 L50 7 L53 14 L56 9 L60 16 Z" fill="#e8b64a" stroke="#7a4a10" stroke-width=".8"/>' : '') +
+      `<text x="24" y="24" font-family="Georgia, serif" font-size="9" fill="${c.color}">${c.suit}</text></g>`;
+    s += half + `<g transform="rotate(180 50 70)">${half}</g>`;
+    s += `<line x1="17" y1="70" x2="83" y2="70" stroke="${c.color}" stroke-width="1.4"/>`;
+  }
+  return s + '</svg>';
+}
+
+/* Miniatura de carta (cartas ativas, resultados). */
+function miniCardHTML(id, count = 0, tiny = false) {
+  const c = CARD_INFO[id];
+  return `<span class="mini-card ${tiny ? 'tiny' : ''}" style="color:${c.color}" title="${c.name}: ${c.effect} (${c.dur.toLowerCase()})">${c.rank}${c.suit}${count > 1 ? `<small>×${count}</small>` : ''}</span>`;
+}
+
+function coinsHTML(n) {
+  let html = '<span class="coins" aria-hidden="true">';
+  for (let i = 0; i < n; i++) html += '<span class="coin">$</span>';
+  return html + '</span>';
+}
+
+/* Loja: 3 cartas sobrepostas ao duelo; é preciso comprar pelo menos uma. */
+function renderShop() {
+  const v = client.view;
+  const m = v.mine;
+  $('shop-round').textContent = `Rodada ${v.round}`;
+  $('shop-gold').innerHTML = `${coinsHTML(m.gold)}<span>Seu ouro: <b>${m.gold}</b></span>`;
+  $('shop-cards').innerHTML = ['K', 'J', 'A'].map((id) => {
+    const c = CARD_INFO[id];
+    const bought = m.bought.includes(id);
+    const poor = !bought && m.gold < c.cost;
+    return `
+      <button type="button" class="shop-card ${bought ? 'bought' : ''} ${poor ? 'poor' : ''}" data-card="${id}"
+              ${bought || poor ? 'disabled' : ''} aria-label="${c.name}: ${c.effect}, ${c.dur}, custa ${c.cost} de ouro">
+        <span class="shop-card-art">${pokerCardSVG(id)}${bought ? '<span class="sold">Comprada</span>' : ''}</span>
+        <span class="shop-card-name">${c.name}</span>
+        <span class="shop-card-effect">${c.effect}</span>
+        <span class="shop-card-dur ${id === 'A' ? 'perm' : ''}">${c.dur}</span>
+        <span class="shop-card-cost">${coinsHTML(c.cost)} ${c.cost} de ouro</span>
+      </button>`;
+  }).join('');
+  const done = $('btn-shop-done');
+  done.classList.toggle('not-ready', m.bought.length === 0);
+  $('shop-status').textContent = m.bought.length === 0
+    ? 'Compre pelo menos uma carta para ir ao duelo. O ouro que sobrar não fica para a próxima rodada.'
+    : m.gold > 0 ? `Ainda sobra ${m.gold} de ouro. Quer comprar mais?` : 'Ouro gasto. Hora do duelo!';
+}
+
+function onShopClick(e) {
+  const btn = e.target.closest('.shop-card');
+  if (!btn || btn.disabled) return;
+  Sound.unlock();
+  Sound.ding();
+  Net.send({ t: 'buy', card: btn.dataset.card });
+}
+
+function finishShop() {
+  if (client.view.mine.bought.length === 0) {
+    Sound.error();
+    $('shop-status').textContent = 'É obrigatório comprar pelo menos uma carta.';
+    return;
+  }
+  Sound.click();
+  Net.send({ t: 'shop-done' });
+}
+
 /* =====================================================================
  * 6. REDE — WebSocket com reconexão automática
  * ===================================================================== */
@@ -705,13 +810,15 @@ function onServerMessage(msg) {
 
 function handleState(v) {
   client.offset = v.now - Date.now();
+  // Comprar o tiro extra muda o número de tiros: redesenha a escolha
+  if (client.view && client.view.mine && v.mine && client.view.mine.shots !== v.mine.shots) client.choiceDirty = true;
   client.view = v;
   client.me = v.you;
   if (v.phase === 'choose') {
     client.lastChooseView = v;
     if (client.choiceRound !== v.round) {
       client.choiceRound = v.round;
-      client.choice = { pos: null, target: null };
+      client.choice = { pos: null, targets: [] };
       client.freshSlot = null;
       client.autoSent = false;
       client.choiceDirty = true;
@@ -749,6 +856,7 @@ function playerById(id) {
 function render() {
   const v = client.view;
   if (!v) return;
+  if (v.phase !== 'choose') $('shop').hidden = true;
   if (v.phase === 'lobby') {
     renderLobby();
     showScreen('screen-lobby');
@@ -931,7 +1039,7 @@ function renderLeaderboard() {
         ${badgeHTML(p)}
         <span class="lb-info">
           <span class="lb-name">${escapeHTML(p.name)}${p.id === client.me ? ' <small>(você)</small>' : ''}</span>
-          ${bulbsHTML(p.hp)}
+          <span class="lb-row">${bulbsHTML(p.hp)}${p.perm ? `<span class="lb-ace" title="Ás de Espadas: +${p.perm} de dano permanente">A♠${p.perm > 1 ? `×${p.perm}` : ''}</span>` : ''}</span>
         </span>
         ${status}
       </li>`;
@@ -950,11 +1058,21 @@ function renderGame() {
     ? `Você <span class="vs">VS</span> ${escapeHTML(opp.name)}`
     : `<span class="muted">${v.pairings.length} ${v.pairings.length === 1 ? 'duelo' : 'duelos'} nesta rodada</span>`;
 
+  const shopping = v.phase === 'choose' && self && self.alive && pr && !v.mine.shopDone;
+  $('gold-box').hidden = !(v.phase === 'choose' && self && self.alive && v.round >= 2);
+  $('gold').textContent = v.mine.gold;
+  $('shop').hidden = !shopping;
+  if (shopping) renderShop();
+
   if (v.phase === 'choose') {
     client.animating = false;
     show('arena', false);
     show('results-panel', false);
-    if (!self || !self.alive || !pr) {
+    if (shopping) {
+      // A loja fica sobreposta à cena do duelo
+      showCenter('choice-panel');
+      renderChoice();
+    } else if (!self || !self.alive || !pr) {
       showCenter('spectate-panel');
       renderSpectate();
     } else if (self.submitted) {
@@ -1003,18 +1121,21 @@ function peekHTML(who, i, ys, extra = '') {
 }
 
 /* Monta a cena. mode 'choose': botões para escolher; 'reveal': só desenho. */
-function sceneHTML({ mode, self, opp, pos = null, target = null, oppPos = null }) {
+function sceneHTML({ mode, self, opp, pos = null, targets = [], oppPos = null }) {
   const choosing = mode === 'choose';
+  const multi = choosing && client.view.mine.shots > 1;
   let mine = '';
   let enemy = '';
   for (let i = 0; i < SLOT_COUNT; i++) {
     if (choosing) {
       const own = pos === i;
-      const tgt = target === i;
+      // Números dos tiros que vão nesta posição (ex.: "1", "2" ou "1+2")
+      const shotsHere = targets.map((t, k) => (t === i ? k + 1 : null)).filter(Boolean);
+      const tgt = shotsHere.length > 0;
       mine += `<button type="button" class="spot own ${own ? 'selected' : ''}" style="${spotStyle(i, SPOT_Y_MINE)}"
                  data-own-slot="${i}" aria-pressed="${own}" aria-label="Aparecer em ${posName(i)}"></button>`;
       enemy += `<button type="button" class="spot target ${tgt ? 'selected' : ''} ${pos === null ? 'locked' : ''}" style="${spotStyle(i, SPOT_Y_ENEMY)}"
-                  data-target-slot="${i}" aria-pressed="${tgt}" aria-label="Atirar em ${posName(i)}">${tgt ? CROSSHAIR_SVG : ''}</button>`;
+                  data-target-slot="${i}" aria-pressed="${tgt}" aria-label="Atirar em ${posName(i)}">${tgt ? CROSSHAIR_SVG + (multi ? `<span class="shot-num">${shotsHere.join('+')}</span>` : '') : ''}</button>`;
     } else {
       // Marcadores invisíveis que servem de mira para os efeitos
       mine += `<span class="spot-anchor" style="${spotStyle(i, SPOT_Y_MINE)}"></span>`;
@@ -1042,9 +1163,12 @@ function sceneHTML({ mode, self, opp, pos = null, target = null, oppPos = null }
 
 function renderChoice() {
   client.choiceDirty = false;
+  const v = client.view;
+  const shots = v.mine.shots;
   const self = { ...me(), ghost: false };
   const opp = opponentOf(myPairing());
   const c = client.choice;
+  if (c.targets.length > shots) c.targets = c.targets.slice(0, shots);
 
   // Mantém o foco do teclado na mesma posição depois de redesenhar
   const active = document.activeElement;
@@ -1053,38 +1177,59 @@ function renderChoice() {
     : active.dataset.targetSlot !== undefined ? `[data-target-slot="${active.dataset.targetSlot}"]` : '');
 
   const scene = $('choice-scene');
-  scene.innerHTML = sceneHTML({ mode: 'choose', self, opp, pos: c.pos, target: c.target });
+  const placed = c.targets.length;
+  scene.innerHTML = sceneHTML({ mode: 'choose', self, opp, pos: c.pos, targets: c.targets });
   scene.classList.toggle('step-1', c.pos === null);
-  scene.classList.toggle('step-2', c.pos !== null && c.target === null);
+  scene.classList.toggle('step-2', c.pos !== null && placed < shots);
   if (client.freshSlot === 'own') scene.querySelector('.peek').classList.add('fresh');
-  if (client.freshSlot === 'target') {
-    const t = scene.querySelector('.spot.target.selected');
+  if (client.freshSlot !== null && client.freshSlot !== 'own') {
+    const t = scene.querySelector(`[data-target-slot="${client.freshSlot}"]`);
     if (t) t.classList.add('fresh');
   }
   client.freshSlot = null;
 
-  $('choice-step').innerHTML = c.pos === null
-    ? '<span class="step-n">1</span><span>Escolha onde o seu pistoleiro vai aparecer na <b>sua parede</b>.</span>'
-    : c.target === null
-      ? `<span class="step-n">2</span><span>Agora escolha onde o tiro vai chegar na parede de <b>${escapeHTML(opp.name)}</b>, ao fundo.</span>`
-      : '<span class="step-n">✓</span><span>Tudo pronto! Você pode trocar as escolhas ou atirar.</span>';
+  const oppName = `<b>${escapeHTML(opp.name)}</b>`;
+  let step;
+  if (c.pos === null) {
+    step = '<span class="step-n">1</span><span>Escolha onde o seu pistoleiro vai aparecer na <b>sua parede</b>.</span>';
+  } else if (placed < shots) {
+    step = shots === 1
+      ? `<span class="step-n">2</span><span>Agora escolha onde o tiro vai chegar na parede de ${oppName}, ao fundo.</span>`
+      : `<span class="step-n">${placed + 2}</span><span>Escolha onde vai o <b>${placed + 1}º tiro</b> na parede de ${oppName}. Pode repetir o mesmo lugar.</span>`;
+  } else {
+    step = shots === 1
+      ? '<span class="step-n">✓</span><span>Tudo pronto! Você pode trocar as escolhas ou atirar.</span>'
+      : '<span class="step-n">✓</span><span>Tudo pronto! Tocar de novo na parede do rival refaz os tiros.</span>';
+  }
+  $('choice-step').innerHTML = step;
+  renderMyCards();
 
-  const missing = [];
-  if (c.pos === null) missing.push('onde aparecer');
-  if (c.target === null) missing.push('onde atirar');
+  const complete = c.pos !== null && placed === shots;
   const status = $('choice-status');
   status.classList.remove('error');
-  status.classList.toggle('ok', missing.length === 0);
-  status.textContent = missing.length
-    ? (c.pos === null ? '' : `Você aparece em ${posName(c.pos)}.`)
-    : `Você aparece em ${posName(c.pos)} e atira em ${posName(c.target)}.`;
-  $('btn-confirm').classList.toggle('not-ready', missing.length > 0);
-  $('btn-confirm').setAttribute('aria-disabled', String(missing.length > 0));
+  status.classList.toggle('ok', complete);
+  status.textContent = c.pos === null
+    ? ''
+    : `Você aparece em ${posName(c.pos)}${placed ? ` e atira em ${c.targets.map(posName).join(' e depois em ')}` : ''}.`;
+  $('btn-confirm').textContent = shots > 1 ? `Atirar ${shots}×!` : 'Atirar!';
+  $('btn-confirm').classList.toggle('not-ready', !complete);
+  $('btn-confirm').setAttribute('aria-disabled', String(!complete));
 
   if (key) {
     const el = scene.querySelector(key);
     if (el) el.focus({ preventScroll: true });
   }
+}
+
+/* Cartas compradas nesta rodada e Ases permanentes, acima da cena. */
+function renderMyCards() {
+  const m = client.view.mine;
+  const chips = [];
+  m.bought.filter((c) => c !== 'A').forEach((c) => chips.push(miniCardHTML(c)));
+  if (m.perm > 0) chips.push(miniCardHTML('A', m.perm));
+  $('my-cards').innerHTML = chips.length
+    ? `${chips.join('')}<span class="my-cards-text">Seus tiros: <b>${m.shots}×</b> de <b>${m.dmg}</b> de dano</span>`
+    : '';
 }
 
 /* Primeiro a posição do pistoleiro; só depois o destino do tiro. */
@@ -1101,8 +1246,12 @@ function onChoiceClick(e) {
       return;
     }
     const slot = Number(target.dataset.targetSlot);
-    client.choice.target = client.choice.target === slot ? null : slot;
-    client.freshSlot = 'target';
+    const shots = client.view.mine.shots;
+    const t = client.choice.targets;
+    if (shots === 1) client.choice.targets = t[0] === slot ? [] : [slot];
+    else if (t.length >= shots) client.choice.targets = [slot];   // recomeça os tiros
+    else t.push(slot);
+    client.freshSlot = slot;
   } else {
     return;
   }
@@ -1121,13 +1270,14 @@ function flashStatus(msg) {
 
 function confirmChoice() {
   const c = client.choice;
-  if (c.pos === null || c.target === null) {
-    flashStatus(`Ainda não dá para atirar. Escolha ${c.pos === null ? 'onde o seu pistoleiro aparece' : 'onde o tiro vai chegar'}.`);
+  const shots = client.view.mine.shots;
+  if (c.pos === null || c.targets.length < shots) {
+    flashStatus(`Ainda não dá para atirar. Escolha ${c.pos === null ? 'onde o seu pistoleiro aparece' : shots > 1 ? 'onde vão os tiros' : 'onde o tiro vai chegar'}.`);
     return;
   }
   Sound.unlock();
   Sound.click();
-  Net.send({ t: 'choice', pos: c.pos, target: c.target });
+  Net.send({ t: 'choice', pos: c.pos, targets: c.targets });
 }
 
 function renderWait() {
@@ -1135,10 +1285,11 @@ function renderWait() {
   const alive = v.players.filter((p) => p.alive);
   const done = alive.filter((p) => p.submitted).length;
   $('wait-text').textContent = `Aguardando os outros pistoleiros (${done}/${alive.length} prontos)…`;
-  const m = v.mine || client.choice;
-  $('wait-mine').innerHTML = m && m.pos !== null && m.pos !== undefined
-    ? `Você aparece em <b>${posName(m.pos)}</b> e atira em <b>${posName(m.target)}</b>.`
-    : '';
+  const m = v.mine.choice;
+  const targets = m ? m.targets.filter((t) => t !== null) : [];
+  $('wait-mine').innerHTML = m && m.pos !== null
+    ? `Você aparece em <b>${posName(m.pos)}</b>${targets.length ? ` e atira em <b>${targets.map(posName).join('</b> e depois em <b>')}</b>` : ''}.`
+    : 'Tempo esgotado: o que faltou vai para <b>Em cima · Esquerda</b>.';
 }
 
 function pairLabel(pr) {
@@ -1171,11 +1322,12 @@ function updateTimer() {
       client.lastTick = left;
       Sound.tick();
     }
-    // No último segundo, envia o que já foi escolhido (o resto é sorteado)
+    // No último segundo, envia o que já foi escolhido; o servidor completa
+    // o resto com "Em cima · Esquerda" (e fecha a loja, se for o caso)
     const c = client.choice;
-    if (playing && left <= 1 && !client.autoSent && (c.pos !== null || c.target !== null)) {
+    if (playing && left <= 1 && !client.autoSent) {
       client.autoSent = true;
-      Net.send({ t: 'choice', pos: c.pos, target: c.target, timeout: true });
+      Net.send({ t: 'choice', pos: c.pos, targets: c.targets, timeout: true });
     }
   } else {
     timer.textContent = '--';
@@ -1270,8 +1422,10 @@ function fireShot(fromArea, toArea, shooter) {
     const far = toArea === 'enemy-area';
     if (shooter.hit) {
       const victim = $('arena-scene').querySelector(`.${toArea} .peek`);
-      victim.classList.add(far ? 'knocked' : 'hurt');
-      fx('hit-burst', to.x, to.y - (far ? 26 : 50), 1300, far ? 'ACERTOU! −1' : 'AI! −1');
+      victim.classList.remove('hurt');
+      void victim.offsetWidth;
+      victim.classList.add('hurt');
+      fx('hit-burst', to.x, to.y - (far ? 26 : 50), 1300, `${far ? 'ACERTOU!' : 'AI!'} −${shooter.dmg}`);
       Sound.ding();
     } else {
       bulletHole(toArea, shooter.target, far ? SPOT_Y_ENEMY : SPOT_Y_MINE);
@@ -1281,13 +1435,15 @@ function fireShot(fromArea, toArea, shooter) {
   }, 180);
 }
 
-/* Sequência da revelação do meu duelo. */
+/* Sequência da revelação do meu duelo: os tiros de mesmo número saem
+ * juntos; se alguém morre, o duelo acaba ali. */
 async function runReveal(duel) {
   client.animating = true;
   const v = client.view;
   const round = v.round;
-  const mineSide = duel.a.id === client.me ? duel.a : duel.b;
-  const oppSide = duel.a.id === client.me ? duel.b : duel.a;
+  const myKey = duel.a.id === client.me ? 'a' : 'b';
+  const mineSide = duel[myKey];
+  const oppSide = duel[myKey === 'a' ? 'b' : 'a'];
   const self = { ...me(), ghost: false };
   const opp = oppSide.id
     ? { ...playerById(oppSide.id), ghost: false }
@@ -1310,14 +1466,25 @@ async function runReveal(duel) {
   Sound.pop();
   await sleep(750);
 
-  // Disparos simultâneos
-  fireShot('my-area', 'enemy-area', mineSide);
-  fireShot('enemy-area', 'my-area', oppSide);
-  Sound.shot();
-  await sleep(1100);
+  for (let k = 0; k < duel.volleys.length; k++) {
+    if (k > 0) await banner(`${k + 1}º disparo!`, 650, 'small');
+    duel.volleys[k].forEach((shot) => {
+      const mine = shot.by === myKey;
+      fireShot(mine ? 'my-area' : 'enemy-area', mine ? 'enemy-area' : 'my-area', shot);
+    });
+    Sound.shot();
+    await sleep(1100);
+  }
 
-  if (!mineSide.hit && !oppSide.hit) await banner('Os dois erraram!', 900, 'small');
-  else if (mineSide.hit && oppSide.hit) await banner('Acerto duplo!', 900, 'small');
+  // Quem morreu no duelo cai
+  const elim = v.results.eliminated;
+  if (oppSide.id && elim.includes(oppSide.id)) scene.querySelector('.enemy-area .peek').classList.add('knocked');
+  if (elim.includes(client.me)) scene.querySelector('.my-area .peek').classList.add('knocked');
+
+  const mineHit = mineSide.hits > 0;
+  const oppHit = oppSide.hits > 0;
+  if (!mineHit && !oppHit) await banner('Ninguém acertou!', 900, 'small');
+  else if (mineHit && oppHit) await banner('Acerto duplo!', 900, 'small');
   await sleep(900);
 
   if (client.view.round !== round) return; // a rodada já mudou (reconexão lenta)
@@ -1329,6 +1496,11 @@ async function runReveal(duel) {
 /* =====================================================================
  * 10. RESULTADOS E FIM DE JOGO
  * ===================================================================== */
+
+/* Dano total causado por um lado ("a" ou "b") no duelo. */
+function damageBy(duel, key) {
+  return duel.volleys.flat().filter((s) => s.by === key).reduce((sum, s) => sum + s.dmg, 0);
+}
 
 function showResults() {
   const v = client.view;
@@ -1345,12 +1517,19 @@ function showResults() {
   if (duel) {
     const mine = duel.a.id === client.me ? duel.a : duel.b;
     const opp = duel.a.id === client.me ? duel.b : duel.a;
+    const myKey = duel.a.id === client.me ? 'a' : 'b';
     const oppName = escapeHTML(opp.id ? playerById(opp.id).name : opp.ghost.name);
-    if (mine.hit && opp.hit) text = `Você acertou ${oppName} e também foi atingido!`;
-    else if (mine.hit) text = opp.id ? `Você acertou ${oppName}! −1 de vida para o rival.` : `Você acertou ${oppName}, mas fantasmas não sangram.`;
-    else if (opp.hit) text = `${oppName} te acertou. Você perdeu 1 de vida.`;
+    const dealt = damageBy(duel, myKey);
+    const taken = damageBy(duel, myKey === 'a' ? 'b' : 'a');
+    const times = (n) => (n > 1 ? ` ${n} vezes` : '');
+    if (mine.hits && opp.hits) text = `Você acertou ${oppName}${times(mine.hits)} (−${dealt}) e também foi atingido${times(opp.hits)} (−${taken})!`;
+    else if (mine.hits) text = opp.id ? `Você acertou ${oppName}${times(mine.hits)}! −${dealt} de vida para o rival.` : `Você acertou ${oppName}${times(mine.hits)}, mas fantasmas não sangram.`;
+    else if (opp.hits) text = `${oppName} te acertou${times(opp.hits)}. Você perdeu ${taken} de vida.`;
     else text = 'Ninguém acertou no seu duelo.';
-    if (mine.auto) text += ' (Seu tempo acabou: parte da jogada foi sorteada.)';
+    if (mine.auto) text += ' (Seu tempo acabou: o que faltou foi para Em cima · Esquerda.)';
+    if (self && self.alive && v.players.filter((p) => p.alive).length > 1) {
+      text += ` <br><span class="gold-note">${coinsHTML(1 + mine.hits)} Na próxima rodada você terá <b>${1 + mine.hits}</b> de ouro.</span>`;
+    }
   }
   if (self && r.eliminated.includes(self.id)) {
     text += ` <b>Você foi eliminado em ${self.place}º lugar.</b>`;
@@ -1365,9 +1544,12 @@ function showResults() {
   // Lista de todos os duelos
   const sideHTML = (s) => {
     const who = s.id ? playerById(s.id) : { ...s.ghost, ghost: true };
-    return `<span class="side">${badgeHTML(who)}<b>${escapeHTML(who.name)}</b><span class="res ${s.hit ? 'hit' : 'miss'}">${s.hit ? 'acertou' : 'errou'}</span></span>`;
+    const dealt = damageBy(s.duel, s.key);
+    const label = s.hits ? `acertou${s.hits > 1 ? ` ${s.hits}×` : ''} −${dealt}` : 'errou';
+    const cards = s.cards.filter((c) => c !== 'A').map((c) => miniCardHTML(c, 0, true)).join('') + (s.perm ? miniCardHTML('A', s.perm, true) : '');
+    return `<span class="side">${badgeHTML(who)}<b>${escapeHTML(who.name)}</b><span class="res ${s.hits ? 'hit' : 'miss'}">${label}</span>${cards}</span>`;
   };
-  let list = r.duels.map((d) => `<li class="duel-line">${sideHTML(d.a)}<span class="vs">VS</span>${sideHTML(d.b)}</li>`).join('');
+  let list = r.duels.map((d) => `<li class="duel-line">${sideHTML({ ...d.a, duel: d, key: 'a' })}<span class="vs">VS</span>${sideHTML({ ...d.b, duel: d, key: 'b' })}</li>`).join('');
   list += r.eliminated.map((id) => {
     const p = playerById(id);
     return `<li class="elim-line">✖ ${escapeHTML(p.name)} foi eliminado — ${p.place}º lugar</li>`;
@@ -1453,6 +1635,8 @@ function init() {
   $('btn-again').addEventListener('click', () => { Sound.click(); Net.send({ t: 'again' }); });
 
   $('choice-scene').addEventListener('click', onChoiceClick);
+  $('shop-cards').addEventListener('click', onShopClick);
+  $('btn-shop-done').addEventListener('click', finishShop);
   $('btn-confirm').addEventListener('click', confirmChoice);
 
   setInterval(updateTimer, 250);

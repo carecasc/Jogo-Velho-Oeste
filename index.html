@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#3b1f2b">
+  <title>Duelo no Velho Oeste</title>
+  <!-- Fontes com cara de cartaz "WANTED" (com fallback caso não carreguem) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Rye&family=Special+Elite&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Botão de som (sempre visível) -->
+  <button id="btn-mute" class="mute-btn" type="button" aria-label="Desligar som" title="Ligar/desligar som"></button>
+
+  <!-- ===================== TELA INICIAL ===================== -->
+  <section id="screen-title" class="screen active" aria-labelledby="titulo-jogo">
+    <div class="poster title-poster">
+      <div class="poster-top">PROCURA-SE</div>
+      <h1 id="titulo-jogo">Duelo no<br>Velho Oeste</h1>
+      <p class="poster-sub">Dois pistoleiros. Duas paredes. Só um sai de pé.</p>
+      <p class="poster-reward">Recompensa: <b>Glória Eterna</b></p>
+      <button id="btn-start" class="btn btn-big" type="button">Começar Duelo</button>
+
+      <details class="rules">
+        <summary>Como jogar</summary>
+        <ul>
+          <li>Cada jogador tem <b>10 de vida</b> e se esconde atrás da sua parede.</li>
+          <li>A parede tem <b>6 posições</b>: esquerda ou direita, em cima, no meio ou embaixo.</li>
+          <li>A cada rodada, em segredo, você escolhe <b>onde vai aparecer</b>, a <b>arma</b> e <b>onde vai atirar</b> na parede do rival.</li>
+          <li><b>Revólver:</b> 3 alvos, 1 de dano. <b>Rifle:</b> 2 alvos, 5 de dano. <b>Espingarda:</b> 1 alvo, 10 de dano.</li>
+          <li>Só causa dano se um dos seus alvos for onde o rival apareceu.</li>
+          <li>Quem chegar a 0 perde. Se os dois caírem juntos, é empate!</li>
+        </ul>
+      </details>
+    </div>
+  </section>
+
+  <!-- ===================== SELEÇÃO DE PERSONAGEM ===================== -->
+  <section id="screen-select" class="screen" aria-labelledby="select-title">
+    <div class="select-wrap">
+      <h2 id="select-title" class="screen-title">Jogador 1, escolha seu pistoleiro</h2>
+      <p id="select-hint" class="screen-hint">Toque em um card e confirme.</p>
+      <div id="char-grid" class="char-grid" role="list"></div>
+      <p id="select-error" class="error-msg" role="alert"></p>
+      <div class="actions-row">
+        <button id="btn-select-back" class="btn btn-ghost" type="button">Voltar</button>
+        <button id="btn-select-confirm" class="btn" type="button">Confirmar</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== PARTIDA ===================== -->
+  <section id="screen-game" class="screen" aria-label="Partida">
+    <header class="game-header">
+      <span class="round-badge">Rodada <b id="round-num">1</b></span>
+      <span id="phase-label" class="phase-label"></span>
+    </header>
+
+    <div class="game-layout">
+      <aside id="side-0" class="side side-0" aria-label="Jogador 1"></aside>
+
+      <div class="center">
+        <!-- Painel de escolhas (secreto) -->
+        <div id="choice-panel" class="choice-panel">
+          <div class="choice-head">
+            <h2 id="choice-title">Jogador 1</h2>
+            <p class="choice-sub">Escolha em segredo! Arma, onde aparecer e onde atirar.</p>
+          </div>
+
+          <div class="step">
+            <h3><span class="step-n">1</span> Escolha a arma</h3>
+            <div id="weapon-list" class="weapon-list"></div>
+          </div>
+
+          <div id="walls-row" class="walls-row"></div>
+
+          <p id="choice-status" class="choice-status" role="status"></p>
+          <button id="btn-confirm" class="btn btn-big btn-confirm" type="button">Confirmar Jogada</button>
+        </div>
+
+        <!-- Arena da revelação -->
+        <div id="arena" class="arena" hidden>
+          <div class="sun"></div>
+          <svg class="mesas" viewBox="0 0 400 100" preserveAspectRatio="none" aria-hidden="true">
+            <path d="M0 100 L0 72 L28 70 L36 42 L82 42 L90 70 L148 72 L158 56 L176 56 L184 72 L258 74 L268 30 L330 30 L342 74 L400 70 L400 100 Z"/>
+          </svg>
+          <div class="ground"></div>
+          <div class="tumbleweed" aria-hidden="true"></div>
+
+          <div class="arena-side left">
+            <div id="arena-label-0" class="arena-label"></div>
+            <div id="arena-wall-0" class="wall arena-wall"></div>
+          </div>
+          <div class="arena-side right">
+            <div id="arena-label-1" class="arena-label"></div>
+            <div id="arena-wall-1" class="wall arena-wall"></div>
+          </div>
+
+          <div id="arena-banner" class="arena-banner" aria-live="polite"></div>
+          <div id="fx-layer" class="fx-layer" aria-hidden="true"></div>
+        </div>
+      </div>
+
+      <aside id="side-1" class="side side-1" aria-label="Jogador 2"></aside>
+    </div>
+  </section>
+
+  <!-- ===================== VITÓRIA ===================== -->
+  <section id="screen-victory" class="screen" aria-labelledby="victory-title">
+    <div class="poster victory-poster">
+      <div id="victory-top" class="poster-top">VENCEDOR</div>
+      <h2 id="victory-title">Jogador 1 venceu!</h2>
+      <div id="victory-cards" class="victory-cards"></div>
+      <p id="victory-text" class="poster-sub"></p>
+      <div class="actions-row">
+        <button id="btn-rematch" class="btn btn-big" type="button">Revanche</button>
+        <button id="btn-newchars" class="btn btn-ghost" type="button">Trocar Personagens</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== OVERLAYS ===================== -->
+  <!-- Passagem de vez (opaco: esconde tudo) -->
+  <div id="overlay-pass" class="overlay overlay-opaque" role="dialog" aria-modal="true" aria-labelledby="pass-title">
+    <div class="poster pass-poster">
+      <div class="pass-round" id="pass-round">Rodada 1</div>
+      <h2 id="pass-title">Vez do Jogador 1</h2>
+      <div id="pass-portrait" class="pass-portrait"></div>
+      <p id="pass-warning" class="pass-warning">O Jogador 2 não pode olhar!</p>
+      <button id="btn-pass" class="btn btn-big" type="button">Estou pronto</button>
+    </div>
+  </div>
+
+  <!-- Os dois já escolheram -->
+  <div id="overlay-ready" class="overlay overlay-opaque" role="dialog" aria-modal="true" aria-labelledby="ready-title">
+    <div class="poster pass-poster">
+      <div class="pass-round">Jogadas feitas</div>
+      <h2 id="ready-title">Hora do duelo!</h2>
+      <p class="pass-warning">Chamem os dois pistoleiros para a revelação.</p>
+      <button id="btn-reveal" class="btn btn-big" type="button">Revelar!</button>
+    </div>
+  </div>
+
+  <!-- Resumo da rodada -->
+  <div id="overlay-summary" class="overlay" role="dialog" aria-modal="true" aria-labelledby="summary-title">
+    <div class="summary-box">
+      <h2 id="summary-title">Resumo da Rodada</h2>
+      <div id="summary-body" class="summary-body"></div>
+      <button id="btn-next" class="btn btn-big" type="button">Próxima rodada</button>
+    </div>
+  </div>
+
+  <script src="game.js"></script>
+</body>
+</html>

@@ -513,30 +513,28 @@ button, input { font: inherit; color: inherit; }
 .wait-mine { margin-top: 10px; padding: 10px; border-radius: 8px; background: rgba(255, 255, 255, .5); }
 .wait-mine:empty { display: none; }
 
-.gallery-panel { padding: 4px 0; }
-.choice-status { text-align: center; min-height: 1.4em; margin: 16px 0 12px; font-size: 1rem; text-shadow: 0 1px 2px #000; }
-.choice-status.ok { color: #9ff0a8; }
-.choice-status.error { color: #ffb4a0; animation: nudge .4s; }
-.btn-confirm { display: block; margin: 0 auto; min-width: 200px; }
-@keyframes nudge { 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
 
-/* ---------- Barraca de tiro ---------- */
-.booth-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; max-width: 760px; margin: 0 auto; }
-.booth-col { min-width: 0; display: flex; flex-direction: column; }
-.booth-step {
+/* ---------- Cena do duelo (rua de faroeste em quadrinhos) ---------- */
+.scene-step {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-family: var(--font-title);
-  font-size: 1.05rem;
-  margin-bottom: 8px;
-  text-shadow: 0 2px 0 #000;
+  gap: 10px;
+  margin: 0 auto 12px;
+  max-width: 900px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  color: var(--ink);
+  background: var(--cream);
+  border: 3px solid var(--wood-dark);
+  font-size: 1rem;
+  line-height: 1.3;
 }
+.scene-step .step-n { flex: none; }
 .step-n {
   display: inline-grid;
   place-items: center;
-  width: 1.7em;
-  height: 1.7em;
+  width: 1.9em;
+  height: 1.9em;
   border-radius: 50%;
   font-family: var(--font-arcade);
   font-size: .65rem;
@@ -544,165 +542,169 @@ button, input { font: inherit; color: inherit; }
   background: var(--gold);
   border: 2px solid #2a0705;
 }
-.booth {
+
+.scene {
+  /* Medidas das paredes (em % da área de cada uma) */
+  --wall-l: 22%;
   position: relative;
-  border-radius: 12px 12px 8px 8px;
-  background: var(--wood-dark);
-  border: 3px solid #1a0a04;
-  box-shadow: 0 14px 28px rgba(0, 0, 0, .55);
+  width: 100%;
+  max-width: 900px;
+  margin: 0 auto;
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  border-radius: 14px;
+  background: #f2d9a8;
+  border: 4px solid #2a0705;
+  box-shadow: 0 0 0 4px var(--gold), 0 0 30px rgba(255, 150, 60, .4), 0 14px 30px rgba(0, 0, 0, .6);
 }
-.booth-sign {
-  position: relative;
-  margin: -6px 10% 0;
-  padding: 14px 12px 12px;
-  border-radius: 12px 12px 0 0;
-  text-align: center;
-  background: linear-gradient(180deg, #b8231a, var(--red-dark));
-  border: 3px solid #2a0705;
-  border-bottom: 0;
+.scene.lights::after { z-index: 6; }
+.scene-bg, .scene-bg svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+
+.wall-area { position: absolute; }
+.my-area { left: 5%; top: 0; width: 46%; height: 100%; }
+.enemy-area { --wall-l: 26%; left: 63%; top: 33%; width: 28%; height: 36%; }
+
+/* Parede de tábuas com contorno grosso */
+.plank-wall {
+  position: absolute;
+  z-index: 2;
+  left: var(--wall-l);
+  right: var(--wall-l);
+  background:
+    repeating-linear-gradient(90deg, transparent 0 calc(20% - 3px), #22140a calc(20% - 3px) 20%),
+    repeating-linear-gradient(90deg, rgba(0, 0, 0, .1) 0 1px, transparent 1px 7px),
+    radial-gradient(ellipse 8% 3% at 30% 22%, rgba(0, 0, 0, .35), transparent),
+    radial-gradient(ellipse 6% 2% at 70% 64%, rgba(0, 0, 0, .3), transparent),
+    linear-gradient(90deg, #4a3020, #75503a 35%, #5d3e28 70%, #3d2618);
+  border: 3px solid #22140a;
 }
-.booth-sign span {
-  position: relative;
-  z-index: 1;
-  display: block;
-  font-family: var(--font-title);
-  font-size: clamp(.8rem, 2.6vw, 1.1rem);
-  color: var(--cream);
+.plank-wall.near { top: -3%; bottom: 0; box-shadow: 12px 0 18px rgba(0, 0, 0, .35); }
+.plank-wall.far { top: 0; bottom: 0; border-width: 2px; filter: brightness(1.08) saturate(.85); }
+.plank-wall.far::after { /* sombra no chão */
+  content: '';
+  position: absolute;
+  left: -20%;
+  right: -40%;
+  bottom: -9%;
+  height: 10%;
+  border-radius: 50%;
+  background: rgba(80, 40, 10, .3);
+}
+.wall-name {
+  position: absolute;
+  z-index: 3;
+  left: 50%;
+  top: -16%;
+  transform: translateX(-50%);
+  max-width: 130%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  text-shadow: 0 2px 0 #2a0705;
-}
-/* Lâmpadas no letreiro da barraca */
-.booth-sign::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  padding: 6px;
-  border-radius: inherit;
-  pointer-events: none;
-  background: radial-gradient(circle, #fff8d8 0 2px, var(--bulb-hot) 3px, transparent 4.5px) 0 0 / 12px 12px;
-  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
-  animation: chase 1s steps(1) infinite;
-}
-.booth.enemy .booth-sign { background: linear-gradient(180deg, #23606a, #12323a); }
-/* Toldo listrado com borda recortada */
-.booth-awning {
-  height: 26px;
-  background: repeating-linear-gradient(90deg, var(--red) 0 20px, var(--cream) 20px 40px);
-  -webkit-mask: linear-gradient(#000 0 0) top / 100% 55% no-repeat, radial-gradient(circle at 50% 0, #000 70%, transparent 72%) bottom / 20px 50% repeat-x;
-  mask: linear-gradient(#000 0 0) top / 100% 55% no-repeat, radial-gradient(circle at 50% 0, #000 70%, transparent 72%) bottom / 20px 50% repeat-x;
-  position: relative;
-  z-index: 1;
-  margin-bottom: -8px;
-}
-.booth-stage {
-  padding: 14px 10px 10px;
-  background:
-    radial-gradient(1px 1px at 20% 20%, #fff8, transparent),
-    radial-gradient(1px 1px at 70% 12%, #fff8, transparent),
-    radial-gradient(1.5px 1.5px at 85% 35%, #fff7, transparent),
-    linear-gradient(180deg, var(--teal-dark), var(--teal));
-  border-left: 8px solid var(--wood);
-  border-right: 8px solid var(--wood);
-}
-.gallery-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  grid-template-rows: repeat(3, 1fr);
-  gap: 8px;
-}
-.booth-counter {
-  height: 24px;
-  border-radius: 0 0 6px 6px;
-  border-top: 4px solid var(--gold);
-  background:
-    repeating-linear-gradient(90deg, rgba(0, 0, 0, .18) 0 2px, transparent 2px 30px),
-    linear-gradient(180deg, var(--wood-light), var(--wood));
+  padding: 2px 10px;
+  border-radius: 6px;
+  font-family: var(--font-title);
+  font-size: clamp(.65rem, 1.8vw, .9rem);
+  color: var(--cream);
+  background: rgba(42, 7, 5, .85);
 }
 
-/* Trilho: cada posição da barraca */
-.lane {
-  position: relative;
-  aspect-ratio: 1.1 / 1;
-  min-height: 52px;
-  padding: 0;
-  overflow: hidden;
-  border-radius: 6px;
-  border: 2px solid rgba(255, 233, 160, .25);
-  background: rgba(0, 0, 0, .28);
-  perspective: 320px;
-  touch-action: manipulation;
-}
-.lane::after { /* tábua listrada na frente do alvo */
-  content: '';
+/* Pistoleiro encostado na parede, esperando */
+.idle {
   position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 24%;
-  z-index: 2;
-  border-top: 3px solid #2a0705;
-  background: repeating-linear-gradient(45deg, var(--red) 0 7px, var(--gold) 7px 14px);
-}
-button.lane { cursor: pointer; transition: background .15s, border-color .15s; }
-button.lane:hover { background: rgba(255, 233, 160, .14); }
-.lane-hint {
-  position: absolute;
-  top: 34%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  font-family: var(--font-arcade);
-  font-size: .8rem;
-  color: rgba(255, 233, 160, .35);
-}
-.lane.selected { border-color: var(--gold); background: rgba(255, 204, 77, .18); }
-.lane.target.selected { border-color: #ff5a3a; background: rgba(200, 40, 28, .35); }
-.lane .cutout {
-  position: absolute;
-  left: 50%;
-  bottom: 6%;
-  width: 66%;
-  height: 90%;
-  transform: translate(-50%, 100%);
-  transform-origin: 50% 100%;
-  transition: transform .45s cubic-bezier(.2, 1.5, .4, 1), filter .3s;
-}
-.lane .cutout.up { transform: translate(-50%, 0); }
-.lane.fresh .cutout.up { animation: popup .35s cubic-bezier(.2, 1.5, .4, 1); }
-.lane .cutout.knocked {
-  transform: translate(-50%, 0) rotateX(68deg);
-  filter: brightness(.55);
-  transition: transform .35s ease-in, filter .35s;
-}
-.crosshair {
-  position: absolute;
-  top: 38%;
-  left: 50%;
-  width: 52%;
-  height: 52%;
-  transform: translate(-50%, -50%);
-  color: #fff1d6;
-  filter: drop-shadow(0 0 4px #ff2a10);
   z-index: 3;
+  left: 50%;
+  bottom: -1%;
+  height: 92%;
+  aspect-ratio: 120 / 300;
+  transform: translateX(-50%);
+  transition: opacity .3s, transform .3s;
+  filter: drop-shadow(6px 4px 6px rgba(0, 0, 0, .35));
 }
-.lane.fresh .crosshair { animation: aim .3s ease-out; }
-@keyframes popup { from { transform: translate(-50%, 100%); } to { transform: translate(-50%, 0); } }
+.idle .portrait { width: 100%; height: 100%; }
+.idle.gone { opacity: 0; transform: translateX(-50%) translateY(4%); }
+
+/* Pistoleiro espiando: a cabeça fica no centro da posição; ele "desliza"
+ * de trás da parede para fora (a parede está na frente dele). */
+.peek {
+  position: absolute;
+  z-index: 1;
+  width: 50%;
+  aspect-ratio: 168 / 150;
+  opacity: 0;
+  transition: transform .45s cubic-bezier(.2, 1.4, .4, 1), opacity .25s;
+}
+.enemy-area .peek { width: 46%; }
+.peek .portrait { width: 100%; height: 100%; overflow: visible; }
+.peek.side-left { transform: translate(-64%, -48%) translateX(55%); }
+.peek.side-right { transform: translate(-36%, -48%) scaleX(-1) translateX(55%); }
+.peek.out { opacity: 1; }
+.peek.side-left.out { transform: translate(-64%, -48%); }
+.peek.side-right.out { transform: translate(-36%, -48%) scaleX(-1); }
+.peek.side-left.fresh { animation: slide-left .4s cubic-bezier(.2, 1.4, .4, 1); }
+.peek.side-right.fresh { animation: slide-right .4s cubic-bezier(.2, 1.4, .4, 1); }
+@keyframes slide-left { from { transform: translate(-64%, -48%) translateX(55%); } }
+@keyframes slide-right { from { transform: translate(-36%, -48%) scaleX(-1) translateX(55%); } }
+.peek.knocked .portrait { transform: rotate(-75deg) translate(-10%, 30%); transform-origin: 70% 100%; filter: brightness(.6); transition: transform .45s ease-in, filter .45s; }
+.peek.knocked { opacity: 0; transition: opacity .5s .5s; }
+.peek.hurt .portrait { animation: hurt .7s; }
+@keyframes hurt {
+  0%, 100% { filter: none; transform: none; }
+  15% { filter: drop-shadow(0 0 8px #ff2a10) brightness(1.4) sepia(1) hue-rotate(-40deg) saturate(5); transform: translateX(-6px); }
+  35% { transform: translateX(6px); }
+  55% { transform: translateX(-4px); }
+}
+
+/* Posições clicáveis */
+.spot {
+  position: absolute;
+  z-index: 4;
+  width: 46px;
+  height: 46px;
+  padding: 0;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  border: 3px dashed rgba(255, 250, 230, .95);
+  background: rgba(34, 20, 10, .45);
+  box-shadow: 0 0 0 2px rgba(34, 20, 10, .5);
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: background .15s, opacity .2s;
+}
+.spot:hover { background: rgba(255, 204, 77, .45); }
+.enemy-area .spot { width: 34px; height: 34px; border-width: 2px; }
+.spot.own.selected { border: 3px solid var(--gold); background: transparent; box-shadow: 0 0 0 2px rgba(34, 20, 10, .6), 0 0 14px rgba(255, 204, 77, .8); }
+.spot.target.selected { border: 2px solid #ff3b1f; background: rgba(200, 40, 28, .35); }
+.spot.locked { opacity: .3; cursor: not-allowed; }
+.spot .crosshair { position: absolute; top: 50%; left: 50%; width: 150%; height: 150%; transform: translate(-50%, -50%); color: #fff1d6; filter: drop-shadow(0 0 4px #ff2a10); }
+.spot.fresh .crosshair { animation: aim .3s ease-out; }
+.scene.step-1 .spot.own:not(.selected),
+.scene.step-2 .spot.target:not(.selected) { animation: spot-pulse 1.2s ease-in-out infinite; }
+@keyframes spot-pulse { 50% { background: rgba(255, 204, 77, .55); box-shadow: 0 0 0 2px rgba(34, 20, 10, .5), 0 0 16px rgba(255, 204, 77, .9); } }
 @keyframes aim { from { transform: translate(-50%, -50%) scale(1.8) rotate(-45deg); opacity: 0; } }
+.spot-anchor { position: absolute; width: 1px; height: 1px; }
+
+.duel-panel { padding: 4px 0; }
+.choice-status { text-align: center; min-height: 1.4em; margin: 14px 0 12px; font-size: 1rem; text-shadow: 0 1px 2px #000; }
+.choice-status.ok { color: #9ff0a8; }
+.choice-status.error { color: #ffb4a0; animation: nudge .4s; }
+.btn-confirm { display: block; margin: 0 auto; min-width: 200px; }
+@keyframes nudge { 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
 
 /* ---------- Revelação ---------- */
-.arena { position: relative; padding: 10px 0; }
-.lane.shot { border-color: rgba(255, 233, 160, .7); }
-.lane.hit { border-color: #ff3b1f; animation: lane-hit .6s; }
-@keyframes lane-hit { 30% { box-shadow: inset 0 0 30px rgba(255, 60, 20, .9); } }
+.arena { position: relative; padding: 4px 0; overflow: hidden; }
+.dust {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: rgba(222, 186, 130, .9);
+  animation: spark .8s ease-out forwards;
+}
 .hole {
   position: absolute;
   z-index: 3;
-  width: 9px;
-  height: 9px;
-  margin: -4.5px 0 0 -4.5px;
+  width: 8px;
+  height: 8px;
+  margin: -4px 0 0 -4px;
   border-radius: 50%;
   background: radial-gradient(circle, #000 35%, #4a3020 60%, transparent 72%);
 }
@@ -847,12 +849,16 @@ button.lane:hover { background: rgba(255, 233, 160, .14); }
   .game-header { padding: 0 60px 10px 12px; gap: 8px; }
   .duel-label { width: 100%; }
   .game-layout { padding: 0 12px; gap: 12px; }
-  .booth-row { gap: 10px; }
-  .booth-step { font-size: .85rem; }
-  .booth-stage { padding: 12px 5px 6px; border-width: 5px; }
-  .gallery-grid { gap: 5px; }
-  .booth-sign { margin: -6px 6% 0; padding: 12px 8px 10px; }
-  .lane { min-height: 44px; }
+  /* Cena mais alta no celular para as paredes caberem */
+  .scene { aspect-ratio: 4 / 5; border-width: 3px; }
+  .my-area { left: 6%; width: 52%; }
+  .enemy-area { --wall-l: 27%; left: 57%; top: 34%; width: 41%; height: 31%; }
+  .idle { height: 74%; }
+  .peek { width: 50%; }
+  .enemy-area .peek { width: 48%; }
+  .spot { width: 40px; height: 40px; }
+  .enemy-area .spot { width: 30px; height: 30px; }
+  .scene-step { font-size: .9rem; padding: 8px 10px; }
   .char-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
   .char-stage { height: 110px; }
   .char-quote { display: none; }

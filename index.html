@@ -103,8 +103,9 @@
 
       <div class="center">
         <!-- Escolha secreta -->
-        <div id="choice-panel" class="gallery-panel" hidden>
-          <div id="choice-booths" class="booth-row"></div>
+        <div id="choice-panel" class="duel-panel" hidden>
+          <p id="choice-step" class="scene-step"></p>
+          <div id="choice-scene" class="scene lights"></div>
           <p id="choice-status" class="choice-status" role="status"></p>
           <button id="btn-confirm" class="btn btn-big btn-confirm" type="button">Atirar!</button>
         </div>
@@ -127,7 +128,7 @@
 
         <!-- Revelação do seu duelo -->
         <div id="arena" class="arena" hidden>
-          <div id="arena-booths" class="booth-row"></div>
+          <div id="arena-scene" class="scene lights"></div>
           <div id="arena-banner" class="arena-banner" aria-live="polite"></div>
           <div id="fx-layer" class="fx-layer" aria-hidden="true"></div>
         </div>

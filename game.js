@@ -327,11 +327,21 @@ function starPoints(cx, cy, outer, inner) {
   return pts.join(' ');
 }
 
-/* Monta o retrato (busto) de um personagem a partir da descrição "look". */
+/* Contorno escuro estilo história em quadrinhos. */
+const OUTLINE = '#22140a';
+const INK = `stroke="${OUTLINE}" stroke-width="1.6" stroke-linejoin="round"`;
+
+/* Retrato (busto) como SVG completo. */
 function portraitSVG(look) {
+  return `<svg class="portrait" viewBox="0 0 120 150" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">${portraitInner(look)}</svg>`;
+}
+
+/* Desenho do busto (sem a tag <svg>), em coordenadas 120 x 150.
+ * Reaproveitado no corpo inteiro e no pistoleiro espiando da parede. */
+function portraitInner(look) {
   const L = look;
   const shade = 'rgba(0,0,0,.22)';
-  let s = '<svg class="portrait" viewBox="0 0 120 150" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">';
+  let s = '';
 
   // Cabelo comprido (atrás da cabeça)
   if (L.hairStyle === 'long') {
@@ -343,14 +353,14 @@ function portraitSVG(look) {
 
   // Tronco: poncho ou casaco com camisa
   if (L.poncho) {
-    s += `<path d="M2 150 L22 112 Q60 98 98 112 L118 150 Z" fill="${L.coat}"/>`;
+    s += `<path d="M2 150 L22 112 Q60 98 98 112 L118 150 Z" fill="${L.coat}" ${INK}/>`;
     let zig = 'M16 126';
     for (let x = 16, down = true; x < 104; x += 8, down = !down) zig += ` L${x + 8} ${down ? 132 : 126}`;
     s += `<path d="${zig}" fill="none" stroke="${L.accent}" stroke-width="3"/>`;
     s += `<path d="M10 140 L110 140" stroke="${L.accent}" stroke-width="4"/>`;
     s += '<path d="M10 145 L110 145" stroke="#f3e2bd" stroke-width="2"/>';
   } else {
-    s += `<path d="M8 150 C12 120 32 108 60 106 C88 108 108 120 112 150 Z" fill="${L.coat}"/>`;
+    s += `<path d="M8 150 C12 120 32 108 60 106 C88 108 108 120 112 150 Z" fill="${L.coat}" ${INK}/>`;
     s += `<path d="M47 107 L60 136 L73 107 Z" fill="${L.shirt}"/>`;
     s += `<path d="M47 107 L60 136 L54 150 L40 113 Z M73 107 L60 136 L66 150 L80 113 Z" fill="${shade}"/>`;
   }
@@ -362,8 +372,8 @@ function portraitSVG(look) {
   }
 
   // Orelhas e cabeça
-  s += `<ellipse cx="38" cy="75" rx="4" ry="6" fill="${L.skin}"/><ellipse cx="82" cy="75" rx="4" ry="6" fill="${L.skin}"/>`;
-  s += `<ellipse cx="60" cy="72" rx="22" ry="26" fill="${L.skin}"/>`;
+  s += `<ellipse cx="38" cy="75" rx="4" ry="6" fill="${L.skin}" ${INK}/><ellipse cx="82" cy="75" rx="4" ry="6" fill="${L.skin}" ${INK}/>`;
+  s += `<ellipse cx="60" cy="72" rx="22" ry="26" fill="${L.skin}" ${INK}/>`;
 
   // Cabelo ao lado do rosto
   if (L.hairStyle === 'long') {
@@ -436,46 +446,44 @@ function portraitSVG(look) {
 
   // Chapéu
   if (L.hat === 'flat') {
-    s += `<rect x="40" y="34" width="40" height="26" rx="3" fill="${L.hatColor}"/>`;
+    s += `<rect x="40" y="34" width="40" height="26" rx="3" fill="${L.hatColor}" ${INK}/>`;
     s += `<rect x="40" y="52" width="40" height="6" fill="${L.hatBand}"/>`;
-    s += `<ellipse cx="60" cy="60" rx="46" ry="6.5" fill="${L.hatColor}"/>`;
+    s += `<ellipse cx="60" cy="60" rx="46" ry="6.5" fill="${L.hatColor}" ${INK}/>`;
     s += '<ellipse cx="60" cy="58.5" rx="44" ry="3" fill="rgba(255,255,255,.07)"/>';
   } else if (L.hat === 'bowler') {
-    s += `<path d="M40 60 C38 30 82 30 80 60 Z" fill="${L.hatColor}"/>`;
+    s += `<path d="M40 60 C38 30 82 30 80 60 Z" fill="${L.hatColor}" ${INK}/>`;
     s += `<rect x="40" y="52" width="40" height="7" fill="${L.hatBand}"/>`;
     s += '<path d="M50 38 Q56 33 64 34" stroke="rgba(255,255,255,.18)" stroke-width="3" fill="none" stroke-linecap="round"/>';
-    s += `<path d="M30 60 Q60 52 90 60 Q86 66 60 65 Q34 66 30 60 Z" fill="${L.hatColor}"/>`;
+    s += `<path d="M30 60 Q60 52 90 60 Q86 66 60 65 Q34 66 30 60 Z" fill="${L.hatColor}" ${INK}/>`;
     s += '<path d="M80 54 C90 46 94 40 96 34 C90 40 86 46 78 52 Z" fill="#e8b64a"/>';
   } else if (L.hat === 'battered') {
-    s += `<path d="M38 61 C36 42 42 28 56 31 C62 24 77 28 82 37 C84 45 83 53 82 61 Z" fill="${L.hatColor}"/>`;
+    s += `<path d="M38 61 C36 42 42 28 56 31 C62 24 77 28 82 37 C84 45 83 53 82 61 Z" fill="${L.hatColor}" ${INK}/>`;
     s += `<path d="M38 54 L82 54 L82 60 L38 60 Z" fill="${L.hatBand}"/>`;
     s += '<rect x="63" y="38" width="9" height="8" fill="#a8896a" transform="rotate(12 67 42)"/>';
     s += '<path d="M64 38 l2 2 m2 -2 l2 2 m-6 4 l2 2" stroke="#3a2c1e" stroke-width=".8"/>';
-    s += `<path d="M12 63 Q20 56 60 57 Q100 56 108 66 Q100 71 60 68 Q20 69 12 63 Z" fill="${L.hatColor}"/>`;
+    s += `<path d="M12 63 Q20 56 60 57 Q100 56 108 66 Q100 71 60 68 Q20 69 12 63 Z" fill="${L.hatColor}" ${INK}/>`;
     s += '<circle cx="48" cy="40" r="1.6" fill="#2a1d12"/>';
   } else {
     // Chapéu de caubói clássico (copa amassada + aba curvada)
-    s += `<path d="M38 60 C36 36 44 22 52 26 Q60 31 68 26 C76 22 84 36 82 60 Z" fill="${L.hatColor}"/>`;
+    s += `<path d="M38 60 C36 36 44 22 52 26 Q60 31 68 26 C76 22 84 36 82 60 Z" fill="${L.hatColor}" ${INK}/>`;
     s += '<path d="M52 26 Q60 31 68 26 Q62 40 60 44 Q58 40 52 26 Z" fill="rgba(0,0,0,.2)"/>';
     s += `<path d="M38 52 L82 52 L82 60 L38 60 Z" fill="${L.hatBand}"/>`;
     if (L.feather) s += `<path d="M78 54 C90 44 96 30 92 22 C88 34 82 44 76 52 Z" fill="${L.feather}" stroke="rgba(0,0,0,.25)" stroke-width=".8"/>`;
-    s += `<path d="M8 51 Q18 67 60 67 Q102 67 112 51 Q96 60 60 59 Q24 60 8 51 Z" fill="${L.hatColor}"/>`;
+    s += `<path d="M8 51 Q18 67 60 67 Q102 67 112 51 Q96 60 60 59 Q24 60 8 51 Z" fill="${L.hatColor}" ${INK}/>`;
     s += '<path d="M8 51 Q18 67 60 67 Q102 67 112 51 Q100 64 60 64 Q20 64 8 51 Z" fill="rgba(0,0,0,.25)"/>';
   }
 
-  s += '</svg>';
   return s;
 }
 
 /* Fantasma genérico (lençol com chapéu) para quando ninguém foi eliminado ainda. */
-const GHOST_SVG =
-  '<svg class="portrait" viewBox="0 0 120 150" aria-hidden="true">' +
-  '<path d="M28 150 L28 84 C28 40 92 40 92 84 L92 150 L82 140 L72 150 L60 140 L48 150 L38 140 Z" fill="#e6efff"/>' +
+const GHOST_INNER =
+  `<path d="M28 150 L28 84 C28 40 92 40 92 84 L92 150 L82 140 L72 150 L60 140 L48 150 L38 140 Z" fill="#e6efff" ${INK}/>` +
   '<ellipse cx="49" cy="84" rx="5" ry="7" fill="#1b1024"/><ellipse cx="71" cy="84" rx="5" ry="7" fill="#1b1024"/>' +
   '<ellipse cx="60" cy="104" rx="6" ry="8" fill="#1b1024"/>' +
-  '<path d="M40 56 C38 34 46 24 54 28 Q60 32 66 28 C74 24 82 34 80 56 Z" fill="#3a3346"/>' +
-  '<path d="M14 52 Q22 64 60 64 Q98 64 106 52 Q92 59 60 58 Q28 59 14 52 Z" fill="#3a3346"/>' +
-  '</svg>';
+  `<path d="M40 56 C38 34 46 24 54 28 Q60 32 66 28 C74 24 82 34 80 56 Z" fill="#3a3346" ${INK}/>` +
+  `<path d="M14 52 Q22 64 60 64 Q98 64 106 52 Q92 59 60 58 Q28 59 14 52 Z" fill="#3a3346" ${INK}/>`;
+const GHOST_SVG = `<svg class="portrait" viewBox="0 0 120 150" aria-hidden="true">${GHOST_INNER}</svg>`;
 
 const CROSSHAIR_SVG =
   '<svg class="crosshair" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="13" fill="none" stroke="currentColor" stroke-width="3"/><circle cx="20" cy="20" r="2.5" fill="currentColor"/><path d="M20 1 V11 M20 29 V39 M1 20 H11 M29 20 H39" stroke="currentColor" stroke-width="3"/></svg>';
@@ -507,6 +515,111 @@ function bulbsHTML(hp) {
   for (let i = 0; i < START_HP; i++) html += `<span class="bulb ${i < hp ? 'on' : ''}"></span>`;
   return html + '</span>';
 }
+
+/* Revólver (cano, tambor e cabo), desenhado apontando para a esquerda. */
+const REVOLVER_LEFT =
+  `<g ${INK}><rect x="-46" y="91" width="28" height="5" rx="1" fill="#9aa0a8"/>` +
+  '<rect x="-24" y="87" width="11" height="11" rx="3" fill="#6b7076"/>' +
+  '<path d="M-15 92 L-5 92 L-1 109 L-10 111 Z" fill="#6a3d1c"/></g>';
+
+/* Pistoleiro inteiro encostado na parede, segurando o revólver (120 x 300). */
+function fullBodySVG(who) {
+  const L = getChar(who.charId).look;
+  const pants = L.pants || '#3b302a';
+  const vest = L.vest || '#2e2420';
+  let s = '<svg class="portrait" viewBox="0 0 120 300" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">';
+  // Pernas e botas
+  s += `<path d="M42 208 L40 286 L58 286 L60 228 L62 286 L80 286 L78 208 Z" fill="${pants}" ${INK}/>`;
+  s += `<path d="M36 282 L58 282 L59 298 L28 298 Q29 287 36 282 Z M62 282 L84 282 Q91 287 92 298 L61 298 Z" fill="#3a2414" ${INK}/>`;
+  // Casaco longo, colete, cinto e coldre
+  s += `<path d="M10 140 L4 258 L42 262 L46 214 L74 214 L78 262 L116 258 L110 140 Z" fill="${L.coat}" ${INK}/>`;
+  s += '<path d="M24 170 L30 236 M96 170 L90 236" stroke="rgba(0,0,0,.25)" stroke-width="2" fill="none"/>';
+  s += `<path d="M44 140 L44 212 L76 212 L76 140 Z" fill="${vest}" ${INK}/>`;
+  s += '<g fill="#c9a24a"><circle cx="60" cy="170" r="1.8"/><circle cx="60" cy="184" r="1.8"/><circle cx="60" cy="198" r="1.8"/></g>';
+  s += `<rect x="42" y="204" width="36" height="9" fill="#5a3519" ${INK}/>`;
+  s += '<rect x="56" y="203" width="9" height="11" rx="1" fill="none" stroke="#e8b64a" stroke-width="2"/>';
+  s += `<path d="M80 210 L93 210 L95 250 L84 252 Z" fill="#7a4a26" ${INK}/>`;
+  s += `<path d="M82 200 L91 200 L91 212 L82 212 Z" fill="#5a3519" ${INK}/>`;
+  // Busto (cabeça, chapéu, ombros)
+  s += portraitInner(L);
+  // Braços dobrados segurando o revólver junto ao peito
+  s += `<path d="M14 126 Q2 172 18 192 Q38 198 60 172 L54 160 Q38 176 30 174 Q26 154 28 130 Z" fill="${L.coat}" ${INK}/>`;
+  s += `<path d="M106 126 Q118 172 102 190 Q84 196 64 174 L70 162 Q84 176 92 172 Q94 152 92 130 Z" fill="${L.coat}" ${INK}/>`;
+  // Revólver com o cabo nas mãos e o cano apontado para cima
+  s += `<g transform="translate(62 162) rotate(120) translate(6 -100)">${REVOLVER_LEFT}</g>`;
+  s += `<ellipse cx="57" cy="166" rx="8" ry="7" fill="${L.skin}" ${INK}/><ellipse cx="66" cy="162" rx="8" ry="7" fill="${L.skin}" ${INK}/>`;
+  s += '</svg>';
+  return s;
+}
+
+/* Pistoleiro espiando pela lateral da parede, com o braço e o revólver
+ * esticados para fora. Desenhado olhando para a esquerda; a CSS espelha
+ * quando ele aparece do lado direito. viewBox: -48 0 168 150. */
+function peekSVG(who) {
+  let s = '<svg class="portrait" viewBox="-48 0 168 150" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">';
+  if (who.ghost && !who.charId) return s + GHOST_INNER + '</svg>';
+  const L = getChar(who.charId).look;
+  s += `<path d="M34 112 L-10 90 L-14 103 L30 128 Z" fill="${L.coat}" ${INK}/>`;
+  s += REVOLVER_LEFT;
+  s += `<circle cx="-11" cy="97" r="7" fill="${L.skin}" ${INK}/>`;
+  s += portraitInner(L);
+  return s + '</svg>';
+}
+
+/* Cenário: rua de cidade de faroeste ao entardecer (estilo quadrinhos). */
+const TOWN_SVG = `
+<svg viewBox="0 0 400 250" preserveAspectRatio="xMidYMax slice" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+  <defs>
+    <linearGradient id="town-sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#bcd9dc"/><stop offset=".55" stop-color="#f6e6bc"/><stop offset="1" stop-color="#f3cf92"/>
+    </linearGradient>
+    <linearGradient id="town-ground" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#e8c48e"/><stop offset="1" stop-color="#c98f52"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="250" fill="url(#town-sky)"/>
+  <circle cx="230" cy="96" r="46" fill="#fff6dc" opacity=".55"/>
+  <g stroke="#4a3220" stroke-width="1.4" stroke-linejoin="round">
+    <!-- prédios da esquerda -->
+    <path d="M-10 46 L30 46 L30 38 L66 38 L66 152 L-10 152 Z" fill="#cdb08a"/>
+    <path d="M66 74 L118 74 L118 64 L140 64 L140 152 L66 152 Z" fill="#d9bf98"/>
+    <path d="M140 102 L170 102 L170 96 L182 96 L182 152 L140 152 Z" fill="#e3cfae"/>
+    <path d="M-10 108 L74 102 L74 108 L-10 114 Z" fill="#a8845a"/>
+    <path d="M66 118 L146 114 L146 119 L66 123 Z" fill="#b8956a"/>
+    <g fill="#6b4a30">
+      <rect x="6" y="58" width="10" height="16"/><rect x="34" y="58" width="10" height="16"/>
+      <rect x="80" y="84" width="9" height="14"/><rect x="100" y="84" width="9" height="14"/><rect x="124" y="84" width="9" height="14"/>
+      <rect x="150" y="110" width="6" height="9"/><rect x="164" y="110" width="6" height="9"/>
+      <rect x="20" y="124" width="14" height="28"/><rect x="96" y="128" width="12" height="24"/>
+    </g>
+    <path d="M6 114 L6 152 M44 111 L44 152 M74 122 L74 152 M110 120 L110 152 M140 118 L140 152" fill="none"/>
+    <!-- prédios da direita -->
+    <path d="M222 100 L236 100 L236 94 L268 94 L268 152 L222 152 Z" fill="#e3cfae"/>
+    <path d="M268 66 L300 66 L300 56 L340 56 L340 152 L268 152 Z" fill="#d9bf98"/>
+    <path d="M340 30 L410 30 L410 152 L340 152 Z" fill="#cdb08a"/>
+    <path d="M262 116 L346 112 L346 118 L262 122 Z" fill="#b8956a"/>
+    <rect x="282" y="72" width="44" height="12" fill="#7a2a1c"/>
+    <g fill="#6b4a30">
+      <rect x="230" y="108" width="7" height="10"/><rect x="250" y="108" width="7" height="10"/>
+      <rect x="280" y="92" width="9" height="14"/><rect x="306" y="92" width="9" height="14"/>
+      <rect x="354" y="44" width="11" height="17"/><rect x="380" y="44" width="11" height="17"/>
+      <rect x="354" y="82" width="11" height="17"/><rect x="380" y="82" width="11" height="17"/>
+      <rect x="296" y="126" width="14" height="26"/><rect x="364" y="122" width="16" height="30"/>
+    </g>
+    <path d="M268 121 L268 152 M300 119 L300 152 M340 117 L340 152" fill="none"/>
+    <!-- poste de amarrar cavalos e barril -->
+    <path d="M150 140 L150 156 M196 140 L196 156 M146 142 L200 142" stroke-width="2.2" fill="none"/>
+    <path d="M206 142 L220 142 L222 158 L204 158 Z" fill="#9a6a3a"/>
+  </g>
+  <text x="304" y="81.5" font-family="Rye, Georgia, serif" font-size="9" text-anchor="middle" fill="#f6e7c4">SALOON</text>
+  <!-- rua de terra -->
+  <path d="M-10 150 L410 150 L410 260 L-10 260 Z" fill="url(#town-ground)"/>
+  <path d="M-10 150 L410 150" stroke="#9a6a3a" stroke-width="1.2"/>
+  <g stroke="#c08850" stroke-width="1.6" stroke-linecap="round" fill="none" opacity=".8">
+    <path d="M196 156 L120 250"/><path d="M214 156 L300 250"/>
+    <path d="M40 176 L70 174"/><path d="M300 170 L338 172"/><path d="M150 210 L190 208"/><path d="M250 228 L296 226"/><path d="M20 230 L60 232"/>
+  </g>
+</svg>`;
 
 /* =====================================================================
  * 6. REDE — WebSocket com reconexão automática
@@ -869,56 +982,92 @@ function showCenter(id) {
   ['choice-panel', 'wait-panel', 'spectate-panel', 'arena', 'results-panel'].forEach((p) => show(p, p === id));
 }
 
-/* Barraca de tiro: letreiro, toldo listrado, 6 trilhos e balcão. */
-function boothHTML(opts) {
-  const { title, step, who, kind, pos, targets = [], id = '' } = opts;
-  let slots = '';
+/* ---------- Cena do duelo ----------
+ * Em primeiro plano, à esquerda, a parede do jogador com o pistoleiro dele;
+ * ao fundo, à direita, a parede do rival. As 6 posições ficam nas laterais
+ * de cada parede (esquerda/direita x em cima/meio/embaixo). */
+
+/* Centro de cada posição, em % da área da parede. */
+const SPOT_X = [14, 86];
+const SPOT_Y_MINE = [22, 48, 74];
+const SPOT_Y_ENEMY = [20, 50, 80];
+
+function spotStyle(i, ys) {
+  return `left:${SPOT_X[i % 2]}%;top:${ys[Math.floor(i / 2)]}%`;
+}
+
+/* Pistoleiro espiando por um lado da parede. */
+function peekHTML(who, i, ys, extra = '') {
+  const side = i % 2 === 0 ? 'side-left' : 'side-right';
+  return `<div class="peek ${side} ${who.ghost ? 'ghosty' : ''} ${extra}" style="${spotStyle(i, ys)}">${peekSVG(who)}</div>`;
+}
+
+/* Monta a cena. mode 'choose': botões para escolher; 'reveal': só desenho. */
+function sceneHTML({ mode, self, opp, pos = null, target = null, oppPos = null }) {
+  const choosing = mode === 'choose';
+  let mine = '';
+  let enemy = '';
   for (let i = 0; i < SLOT_COUNT; i++) {
-    const fresh = client.freshSlot === `${kind}-${i}` ? 'fresh' : '';
-    if (kind === 'own') {
-      const sel = pos === i;
-      slots += `<button type="button" class="lane ${sel ? 'selected' : ''} ${sel ? fresh : ''}" data-own-slot="${i}"
-                  aria-pressed="${sel}" aria-label="Aparecer em ${posName(i)}">
-                  ${sel ? cutoutHTML(who, 'up') : '<span class="lane-hint">?</span>'}
-                </button>`;
-    } else if (kind === 'enemy') {
-      const sel = targets.includes(i);
-      slots += `<button type="button" class="lane target ${sel ? 'selected' : ''} ${sel ? fresh : ''}" data-target-slot="${i}"
-                  aria-pressed="${sel}" aria-label="Atirar em ${posName(i)}">
-                  ${sel ? CROSSHAIR_SVG : ''}
-                </button>`;
+    if (choosing) {
+      const own = pos === i;
+      const tgt = target === i;
+      mine += `<button type="button" class="spot own ${own ? 'selected' : ''}" style="${spotStyle(i, SPOT_Y_MINE)}"
+                 data-own-slot="${i}" aria-pressed="${own}" aria-label="Aparecer em ${posName(i)}"></button>`;
+      enemy += `<button type="button" class="spot target ${tgt ? 'selected' : ''} ${pos === null ? 'locked' : ''}" style="${spotStyle(i, SPOT_Y_ENEMY)}"
+                  data-target-slot="${i}" aria-pressed="${tgt}" aria-label="Atirar em ${posName(i)}">${tgt ? CROSSHAIR_SVG : ''}</button>`;
     } else {
-      slots += `<div class="lane">${i === pos ? cutoutHTML(who) : ''}</div>`;
+      // Marcadores invisíveis que servem de mira para os efeitos
+      mine += `<span class="spot-anchor" style="${spotStyle(i, SPOT_Y_MINE)}"></span>`;
+      enemy += `<span class="spot-anchor" style="${spotStyle(i, SPOT_Y_ENEMY)}"></span>`;
     }
   }
+  const myPeek = pos !== null ? peekHTML(self, pos, SPOT_Y_MINE, choosing ? 'out' : '') : '';
+  const idle = !choosing || pos === null ? `<div class="idle">${fullBodySVG(self)}</div>` : '';
+  const oppPeek = oppPos !== null ? peekHTML(opp, oppPos, SPOT_Y_ENEMY) : '';
   return `
-    <div class="booth-col">
-      ${step ? `<h3 class="booth-step">${step}</h3>` : ''}
-      <div class="booth ${kind}" ${id ? `id="${id}"` : ''}>
-        <div class="booth-sign"><span>${title}</span></div>
-        <div class="booth-awning" aria-hidden="true"></div>
-        <div class="booth-stage"><div class="gallery-grid">${slots}</div></div>
-        <div class="booth-counter" aria-hidden="true"></div>
-      </div>
+    <div class="scene-bg">${TOWN_SVG.replace(/town-/g, `${mode}-town-`)}</div>
+    <div class="wall-area enemy-area">
+      ${oppPeek}
+      <div class="plank-wall far"></div>
+      <div class="wall-name">${escapeHTML(opp.name)}</div>
+      ${enemy}
+    </div>
+    <div class="wall-area my-area">
+      ${myPeek}
+      <div class="plank-wall near"></div>
+      ${idle}
+      ${mine}
     </div>`;
 }
 
 function renderChoice() {
   client.choiceDirty = false;
-  const self = me();
+  const self = { ...me(), ghost: false };
   const opp = opponentOf(myPairing());
   const c = client.choice;
 
-  // Mantém o foco do teclado na mesma casa depois de redesenhar
+  // Mantém o foco do teclado na mesma posição depois de redesenhar
   const active = document.activeElement;
   const key = active && active.dataset && (active.dataset.ownSlot !== undefined
     ? `[data-own-slot="${active.dataset.ownSlot}"]`
     : active.dataset.targetSlot !== undefined ? `[data-target-slot="${active.dataset.targetSlot}"]` : '');
 
-  $('choice-booths').innerHTML =
-    boothHTML({ title: 'Sua barraca', step: '<span class="step-n">1</span> Onde você aparece', who: self, kind: 'own', pos: c.pos }) +
-    boothHTML({ title: escapeHTML(opp.name), step: '<span class="step-n">2</span> Onde você atira', who: opp, kind: 'enemy', targets: c.target === null ? [] : [c.target] });
+  const scene = $('choice-scene');
+  scene.innerHTML = sceneHTML({ mode: 'choose', self, opp, pos: c.pos, target: c.target });
+  scene.classList.toggle('step-1', c.pos === null);
+  scene.classList.toggle('step-2', c.pos !== null && c.target === null);
+  if (client.freshSlot === 'own') scene.querySelector('.peek').classList.add('fresh');
+  if (client.freshSlot === 'target') {
+    const t = scene.querySelector('.spot.target.selected');
+    if (t) t.classList.add('fresh');
+  }
   client.freshSlot = null;
+
+  $('choice-step').innerHTML = c.pos === null
+    ? '<span class="step-n">1</span><span>Escolha onde o seu pistoleiro vai aparecer na <b>sua parede</b>.</span>'
+    : c.target === null
+      ? `<span class="step-n">2</span><span>Agora escolha onde o tiro vai chegar na parede de <b>${escapeHTML(opp.name)}</b>, ao fundo.</span>`
+      : '<span class="step-n">✓</span><span>Tudo pronto! Você pode trocar as escolhas ou atirar.</span>';
 
   const missing = [];
   if (c.pos === null) missing.push('onde aparecer');
@@ -927,28 +1076,33 @@ function renderChoice() {
   status.classList.remove('error');
   status.classList.toggle('ok', missing.length === 0);
   status.textContent = missing.length
-    ? `Escolha ${missing.join(' e ')}.`
+    ? (c.pos === null ? '' : `Você aparece em ${posName(c.pos)}.`)
     : `Você aparece em ${posName(c.pos)} e atira em ${posName(c.target)}.`;
   $('btn-confirm').classList.toggle('not-ready', missing.length > 0);
   $('btn-confirm').setAttribute('aria-disabled', String(missing.length > 0));
 
   if (key) {
-    const el = $('choice-booths').querySelector(key);
-    if (el) el.focus();
+    const el = scene.querySelector(key);
+    if (el) el.focus({ preventScroll: true });
   }
 }
 
+/* Primeiro a posição do pistoleiro; só depois o destino do tiro. */
 function onChoiceClick(e) {
   if (!client.view || client.view.phase !== 'choose') return;
   const own = e.target.closest('[data-own-slot]');
   const target = e.target.closest('[data-target-slot]');
   if (own) {
     client.choice.pos = Number(own.dataset.ownSlot);
-    client.freshSlot = `own-${client.choice.pos}`;
+    client.freshSlot = 'own';
   } else if (target) {
+    if (client.choice.pos === null) {
+      flashStatus('Primeiro escolha onde o seu pistoleiro vai aparecer.');
+      return;
+    }
     const slot = Number(target.dataset.targetSlot);
     client.choice.target = client.choice.target === slot ? null : slot;
-    client.freshSlot = `enemy-${slot}`;
+    client.freshSlot = 'target';
   } else {
     return;
   }
@@ -956,15 +1110,19 @@ function onChoiceClick(e) {
   renderChoice();
 }
 
+function flashStatus(msg) {
+  const status = $('choice-status');
+  status.textContent = msg;
+  status.classList.remove('ok', 'error');
+  void status.offsetWidth;
+  status.classList.add('error');
+  Sound.error();
+}
+
 function confirmChoice() {
   const c = client.choice;
   if (c.pos === null || c.target === null) {
-    const status = $('choice-status');
-    status.textContent = `Ainda não dá para atirar. Escolha ${c.pos === null ? 'onde aparecer' : 'onde atirar'}.`;
-    status.classList.remove('ok', 'error');
-    void status.offsetWidth;
-    status.classList.add('error');
-    Sound.error();
+    flashStatus(`Ainda não dá para atirar. Escolha ${c.pos === null ? 'onde o seu pistoleiro aparece' : 'onde o tiro vai chegar'}.`);
     return;
   }
   Sound.unlock();
@@ -1031,8 +1189,9 @@ function updateTimer() {
  * 9. REVELAÇÃO ANIMADA DO DUELO
  * ===================================================================== */
 
-function arenaLane(side, pos) {
-  return $(`arena-booth-${side}`).querySelector('.gallery-grid').children[pos];
+/* Marcador de uma posição na cena da revelação. */
+function anchorOf(area, pos) {
+  return $('arena-scene').querySelector(`.${area}`).querySelectorAll('.spot-anchor')[pos];
 }
 
 async function banner(text, ms = 700, cls = '') {
@@ -1052,6 +1211,8 @@ function centerIn(el, base) {
 function fx(className, x, y, life = 900, text = '') {
   const el = document.createElement('div');
   el.className = `fx ${className}`;
+  // Letreiros de acerto não podem sair da tela
+  if (text) x = Math.min(Math.max(x, 70), $('arena').clientWidth - 70);
   el.style.left = `${x}px`;
   el.style.top = `${y}px`;
   if (text) el.textContent = text;
@@ -1060,63 +1221,64 @@ function fx(className, x, y, life = 900, text = '') {
   return el;
 }
 
-/* Faíscas/serragem quando a bala acerta a madeira. */
-function splinters(x, y) {
-  for (let i = 0; i < 7; i++) {
-    const p = fx('spark', x, y, 700);
+/* Lascas de madeira e poeira quando a bala passa raspando a parede. */
+function splinters(x, y, scale = 1) {
+  for (let i = 0; i < 8; i++) {
+    const p = fx(i % 2 ? 'spark' : 'dust', x, y, 800);
     const ang = Math.random() * Math.PI * 2;
-    const dist = 12 + Math.random() * 22;
+    const dist = (12 + Math.random() * 22) * scale;
     p.style.setProperty('--dx', `${Math.cos(ang) * dist}px`);
     p.style.setProperty('--dy', `${Math.sin(ang) * dist}px`);
   }
 }
 
-function bulletHole(lane, x, y) {
-  const c = centerIn(lane, $('arena'));
-  const hole = document.createElement('div');
+/* Buraco de bala na borda da parede, ao lado da posição errada. */
+function bulletHole(area, pos, ys) {
+  const hole = document.createElement('span');
   hole.className = 'hole';
-  hole.style.left = `${((x - (c.x - c.w / 2)) / c.w) * 100}%`;
-  hole.style.top = `${((y - (c.y - c.h / 2)) / c.h) * 100}%`;
-  lane.appendChild(hole);
+  const edge = pos % 2 === 0 ? 'calc(var(--wall-l) + 6px)' : 'calc(100% - var(--wall-l) - 6px)';
+  hole.style.left = edge;
+  hole.style.top = `${ys[Math.floor(pos / 2)] + (Math.random() - 0.5) * 8}%`;
+  $('arena-scene').querySelector(`.${area}`).appendChild(hole);
 }
 
-/* Um disparo do lado "side" (0 = eu, 1 = rival) contra a barraca do outro. */
-function fireShot(side, shooter) {
+/* Um disparo: do revólver de quem atira até a posição escolhida. */
+function fireShot(fromArea, toArea, shooter) {
   const arena = $('arena');
-  const dir = side === 0 ? 1 : -1;
-  const from = centerIn(arenaLane(side, shooter.pos), arena);
-  from.x += dir * from.w * 0.4;
-  from.y -= from.h * 0.1;
-  const lane = arenaLane(1 - side, shooter.target);
-  const to = centerIn(lane, arena);
-  const tx = to.x + (Math.random() - 0.5) * to.w * 0.3;
-  const ty = to.y - to.h * 0.1 + (Math.random() - 0.5) * to.h * 0.25;
+  const fig = $('arena-scene').querySelector(`.${fromArea} .peek`);
+  const r = fig.getBoundingClientRect();
+  const b = arena.getBoundingClientRect();
+  const left = fig.classList.contains('side-left');
+  // Ponta do cano: borda de fora da figura, na altura da mão
+  const from = { x: (left ? r.left : r.right) - b.left, y: r.top - b.top + r.height * 0.63 };
+  const to = centerIn(anchorOf(toArea, shooter.target), arena);
+  const tx = to.x + (Math.random() - 0.5) * 10;
+  const ty = to.y + (Math.random() - 0.5) * 10;
 
   fx('muzzle', from.x, from.y, 260);
   const dx = tx - from.x;
   const dy = ty - from.y;
-  const tracer = fx('tracer', from.x, from.y, 400);
+  const tracer = fx('tracer', from.x, from.y, 420);
   tracer.style.width = `${Math.hypot(dx, dy)}px`;
   const rot = `rotate(${Math.atan2(dy, dx)}rad)`;
   tracer.animate(
     [{ transform: `${rot} scaleX(0)`, opacity: 1 }, { transform: `${rot} scaleX(1)`, opacity: 1, offset: 0.5 }, { transform: `${rot} scaleX(1)`, opacity: 0 }],
-    { duration: 340, easing: 'ease-out', fill: 'forwards' }
+    { duration: 360, easing: 'ease-out', fill: 'forwards' }
   );
-  lane.classList.add('shot');
 
   setTimeout(() => {
+    const far = toArea === 'enemy-area';
     if (shooter.hit) {
-      lane.classList.add('hit');
-      const cut = lane.querySelector('.cutout');
-      if (cut) cut.classList.add('knocked');
-      fx('hit-burst', to.x, to.y - to.h * 0.25, 1300, 'PLIM! −1');
+      const victim = $('arena-scene').querySelector(`.${toArea} .peek`);
+      victim.classList.add(far ? 'knocked' : 'hurt');
+      fx('hit-burst', to.x, to.y - (far ? 26 : 50), 1300, far ? 'ACERTOU! −1' : 'AI! −1');
       Sound.ding();
     } else {
-      bulletHole(lane, tx, ty);
-      splinters(tx, ty);
+      bulletHole(toArea, shooter.target, far ? SPOT_Y_ENEMY : SPOT_Y_MINE);
+      splinters(tx, ty, far ? 0.6 : 1.1);
       if (Math.random() < 0.6) Sound.ricochet();
     }
-  }, 170);
+  }, 180);
 }
 
 /* Sequência da revelação do meu duelo. */
@@ -1126,7 +1288,7 @@ async function runReveal(duel) {
   const round = v.round;
   const mineSide = duel.a.id === client.me ? duel.a : duel.b;
   const oppSide = duel.a.id === client.me ? duel.b : duel.a;
-  const self = me();
+  const self = { ...me(), ghost: false };
   const opp = oppSide.id
     ? { ...playerById(oppSide.id), ghost: false }
     : { name: oppSide.ghost.name, charId: oppSide.ghost.charId, ghost: true };
@@ -1134,28 +1296,25 @@ async function runReveal(duel) {
   renderLeaderboard();
   showCenter('arena');
   $('fx-layer').innerHTML = '';
-  $('arena-booths').innerHTML =
-    boothHTML({ title: escapeHTML(self.name), who: self, kind: 'arena', pos: mineSide.pos, id: 'arena-booth-0' }) +
-    boothHTML({ title: escapeHTML(opp.name), who: opp, kind: 'arena', pos: oppSide.pos, id: 'arena-booth-1' });
+  const scene = $('arena-scene');
+  scene.innerHTML = sceneHTML({ mode: 'reveal', self, opp, pos: mineSide.pos, oppPos: oppSide.pos });
   $('arena').scrollIntoView({ behavior: 'smooth', block: 'center' });
 
   await sleep(300);
   await banner(`Rodada ${round}`, 700);
   await banner('FOGO!', 450, 'fire');
 
-  // Os dois alvos sobem ao mesmo tempo
-  [0, 1].forEach((side) => {
-    const lane = arenaLane(side, side === 0 ? mineSide.pos : oppSide.pos);
-    lane.querySelector('.cutout').classList.add('up');
-  });
+  // Os dois saem de trás da parede ao mesmo tempo
+  scene.querySelector('.idle').classList.add('gone');
+  scene.querySelectorAll('.peek').forEach((p) => p.classList.add('out'));
   Sound.pop();
   await sleep(750);
 
   // Disparos simultâneos
-  fireShot(0, mineSide);
-  fireShot(1, oppSide);
+  fireShot('my-area', 'enemy-area', mineSide);
+  fireShot('enemy-area', 'my-area', oppSide);
   Sound.shot();
-  await sleep(1000);
+  await sleep(1100);
 
   if (!mineSide.hit && !oppSide.hit) await banner('Os dois erraram!', 900, 'small');
   else if (mineSide.hit && oppSide.hit) await banner('Acerto duplo!', 900, 'small');
@@ -1293,7 +1452,7 @@ function init() {
   $('btn-leave-over').addEventListener('click', leaveRoom);
   $('btn-again').addEventListener('click', () => { Sound.click(); Net.send({ t: 'again' }); });
 
-  $('choice-booths').addEventListener('click', onChoiceClick);
+  $('choice-scene').addEventListener('click', onChoiceClick);
   $('btn-confirm').addEventListener('click', confirmChoice);
 
   setInterval(updateTimer, 250);

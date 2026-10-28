@@ -24,8 +24,8 @@ Quem cria a sala recebe um **código de 4 letras** e um link para compartilhar. 
 1. Cada jogador escolhe um pistoleiro entre 8. A diferença é só visual.
 2. Todos começam com **5 de vida** (as lâmpadas do placar).
 3. A cada rodada os vivos são sorteados em **duelos 1 contra 1**. O rodízio evita repetir o adversário das últimas rodadas.
-4. Cada barraca tem **6 posições**: esquerda ou direita, em cima, no meio ou embaixo.
-5. Em segredo, cada um escolhe **onde aparecer** na própria barraca e **onde atirar** na barraca do rival. É **1 disparo**, que tira **1 de vida** se acertar onde o rival apareceu. Os dois podem se acertar na mesma rodada.
+4. Cada pistoleiro se esconde atrás de uma parede, com **6 posições**: lado esquerdo ou direito, em cima, no meio ou embaixo.
+5. Na tela do duelo, seu pistoleiro aparece encostado na sua parede (em primeiro plano) e a parede do rival fica ao fundo. Em segredo, você escolhe **primeiro onde aparecer** na sua parede e **depois onde o tiro vai chegar** na parede do rival. É **1 disparo**, que tira **1 de vida** se acertar onde o rival apareceu. Os dois podem se acertar na mesma rodada.
 6. Há **30 segundos** para escolher. O que ficar sem escolha é sorteado.
 7. Com número ímpar de vivos, um jogador enfrenta um **fantasma** (o último eliminado). O fantasma atira, mas não perde vida.
 8. Quem chega a 0 é eliminado. Quem cai na mesma rodada divide a colocação. O último de pé vence; se todos os restantes caírem juntos, é empate.
@@ -35,6 +35,6 @@ Quem recarrega a página ou perde a conexão volta para a mesma sala automaticam
 ## Arquivos
 
 - `index.html`: telas (início, saguão, partida, fim de jogo).
-- `style.css`: visual de estande de tiro de quermesse (letreiros com lâmpadas, toldo listrado, alvos de madeira) e layout responsivo.
-- `game.js`: cliente: conexão com o servidor, placar, escolha secreta, animação da revelação, sons (Web Audio API) e retratos em SVG.
+- `style.css`: visual de fliperama (letreiros com lâmpadas), cena do duelo em rua de faroeste estilo quadrinhos e layout responsivo.
+- `game.js`: cliente: conexão com o servidor, placar, escolha secreta, animação da revelação, sons (Web Audio API) e desenhos em SVG (pistoleiros, paredes e cidade).
 - `server.js`: servidor: arquivos estáticos, WebSocket próprio, salas, pareamento em rodízio, resolução dos tiros e eliminações.

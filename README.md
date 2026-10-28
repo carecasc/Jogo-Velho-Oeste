@@ -1,43 +1,51 @@
 # Duelo no Velho Oeste
 
-Jogo de duelo para **2 jogadores no mesmo dispositivo** (hot-seat), feito com HTML, CSS e JavaScript puro, sem dependências.
+Estande de tiro de faroeste **online para 2 a 8 jogadores**, cada um no seu aparelho. É feito com HTML, CSS e JavaScript puro, e o servidor é Node.js sem nenhuma dependência.
 
 ## Como rodar
 
-Abra o `index.html` direto no navegador (duplo clique). Não precisa de build nem de servidor.
-
-Se preferir usar um servidor local:
+Você precisa do [Node.js](https://nodejs.org) 18 ou mais novo.
 
 ```bash
-python3 -m http.server 8000
-# depois acesse http://localhost:8000
+npm start          # ou: node server.js
 ```
 
-As fontes vêm do Google Fonts. Sem internet, o jogo usa fontes de reserva e continua funcionando.
+Depois abra **http://localhost:3000**. Abrir o `index.html` direto (duplo clique) não funciona, porque o jogo precisa do servidor.
+
+### Jogando com outras pessoas
+
+- **Mesma rede Wi-Fi:** descubra o IP do computador que roda o servidor (ex.: `192.168.0.10`). Os outros abrem `http://192.168.0.10:3000` no celular ou no PC.
+- **Pela internet:** publique a pasta em qualquer serviço que rode Node.js (Render, Railway, Fly.io etc.) com o comando `npm start`. O servidor usa a porta da variável `PORT`. Para um teste rápido, um túnel como `cloudflared tunnel --url http://localhost:3000` ou `ngrok http 3000` também serve.
+
+Quem cria a sala recebe um **código de 4 letras** e um link para compartilhar. Quem abre o link já entra com o código preenchido.
 
 ## Regras
 
-1. Cada jogador escolhe um pistoleiro (6 opções). Todos seguem as mesmas regras; a diferença é só visual.
-2. Os dois começam com **10 de vida**, cada um escondido atrás da sua parede.
-3. A parede tem **6 posições**: Esquerda ou Direita, combinada com Em cima, Meio ou Embaixo.
-4. A cada rodada, um jogador por vez escolhe **em segredo**, enquanto o outro não olha:
-   - a **arma**;
-   - **onde vai aparecer** na própria parede;
-   - **onde vai atirar** na parede do adversário.
+1. Cada jogador escolhe um pistoleiro entre 8. A diferença é só visual.
+2. Todos começam com **5 de vida** (as lâmpadas do placar).
+3. A cada rodada os vivos são sorteados em **duelos 1 contra 1**. O rodízio evita repetir o adversário das últimas rodadas.
+4. Cada pistoleiro se esconde atrás de uma parede, com **6 posições**: lado esquerdo ou direito, em cima, no meio ou embaixo.
+5. Na tela do duelo, seu pistoleiro aparece encostado na sua parede (em primeiro plano) e a parede do rival fica ao fundo. Em segredo, você escolhe **primeiro onde aparecer** e **depois onde o tiro vai chegar**. Cada tiro que acerta tira vida do rival.
+6. Há **30 segundos** por rodada. Quem não escolher a tempo aparece em **Em cima · Esquerda** e atira em **Em cima · Esquerda**.
+7. A **1ª rodada** é só com 1 tiro para todo mundo.
+8. Da **2ª rodada em diante**, cada jogador recebe **1 de ouro**, mais **1 de ouro por acerto** na rodada anterior. O ouro **não acumula**: o que sobrar se perde.
+9. Antes do duelo, a **Mesa de Pôquer** aparece por cima do jogo com 3 cartas, e é obrigatório comprar **pelo menos uma**. Se o tempo acabar sem compra, o jogo compra o Valete.
 
-   | Arma       | Dano | Alvos |
-   |------------|------|-------|
-   | Revólver   | 1    | 3     |
-   | Rifle      | 5    | 2     |
-   | Espingarda | 10   | 1     |
+   | Carta | Custo | Efeito | Duração |
+   |-------|-------|--------|---------|
+   | **K♥** Rei de Copas | 1 | +1 de dano nos seus tiros | só nesta rodada |
+   | **J♦** Valete de Ouros | 1 | 1 tiro extra | só nesta rodada |
+   | **A♠** Ás de Espadas | 3 | +1 de dano nos seus tiros | permanente (acumula) |
 
-5. As escolhas são reveladas ao mesmo tempo. Um jogador só causa dano se um dos alvos dele for a posição onde o adversário apareceu.
-6. Quem chegar a 0 de vida perde. Se os dois chegarem a 0 na mesma rodada, é **empate**.
+10. Com tiro extra, você escolhe o **1º e o 2º tiro**, que podem ir no **mesmo lugar**. Os tiros saem em ordem: primeiro os dois 1º tiros juntos, depois os 2º. Quem morre no 1º disparo não faz o 2º. Para juntar 3 de ouro e comprar o Ás, é preciso acertar os 2 tiros.
+11. Com número ímpar de vivos, um jogador enfrenta um **fantasma** (o último eliminado). O fantasma dá 1 tiro ao acaso e não perde vida.
+12. Quem chega a 0 é eliminado. Quem cai na mesma rodada divide a colocação. O último de pé vence; se todos os restantes caírem juntos, é empate.
 
-Não dá para confirmar a jogada sem escolher posição, arma e o número certo de alvos. O som pode ser ligado ou desligado no botão do canto superior direito.
+Quem recarrega a página ou perde a conexão volta para a mesma sala automaticamente. Quem clica em "Sair" no meio da partida é eliminado.
 
 ## Arquivos
 
-- `index.html`: estrutura das telas (início, seleção, partida, passagem de vez, resumo, vitória).
-- `style.css`: tema de faroeste, cards, arena, animações e layout responsivo.
-- `game.js`: dados, estado, áudio (Web Audio API), arte em SVG, fluxo das rodadas, resolução de dano e animação da revelação.
+- `index.html`: telas (início, saguão, partida, fim de jogo).
+- `style.css`: visual de fliperama (letreiros com lâmpadas), cena do duelo em rua de faroeste estilo quadrinhos e layout responsivo.
+- `game.js`: cliente: conexão com o servidor, placar, loja de cartas, escolha secreta, animação da revelação, sons (Web Audio API) e desenhos em SVG (pistoleiros, paredes, cidade e cartas de pôquer).
+- `server.js`: servidor: arquivos estáticos, WebSocket próprio, salas, pareamento em rodízio, ouro e cartas, resolução dos tiros e eliminações.

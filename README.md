@@ -1,43 +1,40 @@
 # Duelo no Velho Oeste
 
-Jogo de duelo para **2 jogadores no mesmo dispositivo** (hot-seat), feito com HTML, CSS e JavaScript puro, sem dependências.
+Estande de tiro de faroeste **online para 2 a 8 jogadores**, cada um no seu aparelho. É feito com HTML, CSS e JavaScript puro, e o servidor é Node.js sem nenhuma dependência.
 
 ## Como rodar
 
-Abra o `index.html` direto no navegador (duplo clique). Não precisa de build nem de servidor.
-
-Se preferir usar um servidor local:
+Você precisa do [Node.js](https://nodejs.org) 18 ou mais novo.
 
 ```bash
-python3 -m http.server 8000
-# depois acesse http://localhost:8000
+npm start          # ou: node server.js
 ```
 
-As fontes vêm do Google Fonts. Sem internet, o jogo usa fontes de reserva e continua funcionando.
+Depois abra **http://localhost:3000**. Abrir o `index.html` direto (duplo clique) não funciona, porque o jogo precisa do servidor.
+
+### Jogando com outras pessoas
+
+- **Mesma rede Wi-Fi:** descubra o IP do computador que roda o servidor (ex.: `192.168.0.10`). Os outros abrem `http://192.168.0.10:3000` no celular ou no PC.
+- **Pela internet:** publique a pasta em qualquer serviço que rode Node.js (Render, Railway, Fly.io etc.) com o comando `npm start`. O servidor usa a porta da variável `PORT`. Para um teste rápido, um túnel como `cloudflared tunnel --url http://localhost:3000` ou `ngrok http 3000` também serve.
+
+Quem cria a sala recebe um **código de 4 letras** e um link para compartilhar. Quem abre o link já entra com o código preenchido.
 
 ## Regras
 
-1. Cada jogador escolhe um pistoleiro (6 opções). Todos seguem as mesmas regras; a diferença é só visual.
-2. Os dois começam com **10 de vida**, cada um escondido atrás da sua parede.
-3. A parede tem **6 posições**: Esquerda ou Direita, combinada com Em cima, Meio ou Embaixo.
-4. A cada rodada, um jogador por vez escolhe **em segredo**, enquanto o outro não olha:
-   - a **arma**;
-   - **onde vai aparecer** na própria parede;
-   - **onde vai atirar** na parede do adversário.
+1. Cada jogador escolhe um pistoleiro entre 8. A diferença é só visual.
+2. Todos começam com **5 de vida** (as lâmpadas do placar).
+3. A cada rodada os vivos são sorteados em **duelos 1 contra 1**. O rodízio evita repetir o adversário das últimas rodadas.
+4. Cada barraca tem **6 posições**: esquerda ou direita, em cima, no meio ou embaixo.
+5. Em segredo, cada um escolhe **onde aparecer** na própria barraca e **onde atirar** na barraca do rival. É **1 disparo**, que tira **1 de vida** se acertar onde o rival apareceu. Os dois podem se acertar na mesma rodada.
+6. Há **30 segundos** para escolher. O que ficar sem escolha é sorteado.
+7. Com número ímpar de vivos, um jogador enfrenta um **fantasma** (o último eliminado). O fantasma atira, mas não perde vida.
+8. Quem chega a 0 é eliminado. Quem cai na mesma rodada divide a colocação. O último de pé vence; se todos os restantes caírem juntos, é empate.
 
-   | Arma       | Dano | Alvos |
-   |------------|------|-------|
-   | Revólver   | 1    | 3     |
-   | Rifle      | 5    | 2     |
-   | Espingarda | 10   | 1     |
-
-5. As escolhas são reveladas ao mesmo tempo. Um jogador só causa dano se um dos alvos dele for a posição onde o adversário apareceu.
-6. Quem chegar a 0 de vida perde. Se os dois chegarem a 0 na mesma rodada, é **empate**.
-
-Não dá para confirmar a jogada sem escolher posição, arma e o número certo de alvos. O som pode ser ligado ou desligado no botão do canto superior direito.
+Quem recarrega a página ou perde a conexão volta para a mesma sala automaticamente. Quem clica em "Sair" no meio da partida é eliminado.
 
 ## Arquivos
 
-- `index.html`: estrutura das telas (início, seleção, partida, passagem de vez, resumo, vitória).
-- `style.css`: tema de faroeste, cards, arena, animações e layout responsivo.
-- `game.js`: dados, estado, áudio (Web Audio API), arte em SVG, fluxo das rodadas, resolução de dano e animação da revelação.
+- `index.html`: telas (início, saguão, partida, fim de jogo).
+- `style.css`: visual de estande de tiro de quermesse (letreiros com lâmpadas, toldo listrado, alvos de madeira) e layout responsivo.
+- `game.js`: cliente: conexão com o servidor, placar, escolha secreta, animação da revelação, sons (Web Audio API) e retratos em SVG.
+- `server.js`: servidor: arquivos estáticos, WebSocket próprio, salas, pareamento em rodízio, resolução dos tiros e eliminações.

@@ -328,8 +328,8 @@ function starPoints(cx, cy, outer, inner) {
 }
 
 /* Contorno escuro estilo história em quadrinhos. */
-const OUTLINE = '#22140a';
-const INK = `stroke="${OUTLINE}" stroke-width="1.6" stroke-linejoin="round"`;
+const OUTLINE = '#141010';
+const INK = `stroke="${OUTLINE}" stroke-width="2.4" stroke-linejoin="round"`;
 
 /* Retrato (busto) como SVG completo. */
 function portraitSVG(look) {
@@ -340,7 +340,7 @@ function portraitSVG(look) {
  * Reaproveitado no corpo inteiro e no pistoleiro espiando da parede. */
 function portraitInner(look) {
   const L = look;
-  const shade = 'rgba(0,0,0,.22)';
+  const shade = 'url(#ht)';   // sombra em retícula de pontos (gibi antigo)
   let s = '';
 
   // Cabelo comprido (atrás da cabeça)
@@ -535,16 +535,20 @@ function bodyCore(L, coat) {
   return s;
 }
 
-/* Pistoleiro inteiro encostado na parede, segurando o revólver (120 x 300). */
+/* Pistoleiro de frente para a tela, em repouso, encostado na parede e
+ * segurando o revólver junto ao peito (120 x 300). */
 function fullBodySVG(who) {
   const L = getChar(who.charId).look;
   const pants = L.pants || '#3b302a';
   let s = '<svg class="portrait" viewBox="0 0 120 300" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">';
   // Pernas e botas
   s += `<path d="M42 208 L40 286 L58 286 L60 228 L62 286 L80 286 L78 208 Z" fill="${pants}" ${INK}/>`;
+  s += '<path d="M62 228 L62 286 L80 286 L78 208 Z" fill="url(#hatch)"/>';
   s += `<path d="M36 282 L58 282 L59 298 L28 298 Q29 287 36 282 Z M62 282 L84 282 Q91 287 92 298 L61 298 Z" fill="#3a2414" ${INK}/>`;
   // Casaco longo, colete, cinto e coldre
   s += bodyCore(L, 'M10 140 L4 258 L42 262 L46 214 L74 214 L78 262 L116 258 L110 140 Z');
+  s += '<path d="M84 140 L110 140 L116 258 L80 262 L76 214 Z" fill="url(#ht)"/>';
+  s += '<path d="M10 200 L4 258 L42 262 L44 230 Z" fill="url(#ht-light)"/>';
   s += `<path d="M80 210 L93 210 L95 250 L84 252 Z" fill="#7a4a26" ${INK}/>`;
   s += `<path d="M82 200 L91 200 L91 212 L82 212 Z" fill="#5a3519" ${INK}/>`;
   // Busto (cabeça, chapéu, ombros)
@@ -552,6 +556,7 @@ function fullBodySVG(who) {
   // Braços dobrados segurando o revólver junto ao peito
   s += `<path d="M14 126 Q2 172 18 192 Q38 198 60 172 L54 160 Q38 176 30 174 Q26 154 28 130 Z" fill="${L.coat}" ${INK}/>`;
   s += `<path d="M106 126 Q118 172 102 190 Q84 196 64 174 L70 162 Q84 176 92 172 Q94 152 92 130 Z" fill="${L.coat}" ${INK}/>`;
+  s += '<path d="M106 126 Q118 172 102 190 Q96 176 92 150 Z" fill="url(#ht)"/>';
   // Revólver com o cabo nas mãos e o cano apontado para cima
   s += `<g transform="translate(62 162) rotate(120) translate(6 -100)">${REVOLVER_LEFT}</g>`;
   s += `<ellipse cx="57" cy="166" rx="8" ry="7" fill="${L.skin}" ${INK}/><ellipse cx="66" cy="162" rx="8" ry="7" fill="${L.skin}" ${INK}/>`;
@@ -569,9 +574,22 @@ const LEAN = [
   { head: 0.42, angle: 32 },
   { head: 0.21, angle: 56 },
 ];
-const FIG_VB = { x: -37, w: 167, h: 300 };      // viewBox do pistoleiro
-const FIG_FEET_X = (60 - FIG_VB.x) / FIG_VB.w;   // pés (pivô) na largura
-const FIG_HEAD_D = (300 - 72) / 300;             // distância pés-cabeça / altura
+/* Medidas de cada desenho (viewBox de 300 de altura): "front" é o rival,
+ * de frente; "back" é o jogador, de costas para a tela.
+ * x/w: viewBox; feet: x dos pés (pivô); head: y do centro da cabeça. */
+const VIEWS = {
+  front: { x: -37, w: 167, feet: 60, head: 72 },
+  back: { x: 0, w: 214, feet: 95, head: 72 },
+};
+
+/* Clareia (pct > 0) ou escurece (pct < 0) uma cor #rrggbb, para as facetas. */
+function shade(hex, pct) {
+  const n = parseInt(hex.slice(1), 16);
+  const t = pct < 0 ? 0 : 255;
+  const k = Math.abs(pct) / 100;
+  const mix = (c) => Math.round((t - c) * k + c);
+  return `rgb(${mix(n >> 16)},${mix((n >> 8) & 255)},${mix(n & 255)})`;
+}
 
 /* Braço esticado com o revólver; (hx, hy) é a mão. */
 function gunArm(L, shoulder, hx, hy) {
@@ -587,7 +605,8 @@ function gunArm(L, shoulder, hx, hy) {
  * corpo, para a arma continuar na horizontal quando ele se inclina.
  * O círculo "gun-tip" marca a ponta do cano (origem do clarão do tiro). */
 function gunmanSVG(who, angle) {
-  let s = `<svg class="portrait" viewBox="${FIG_VB.x} 0 ${FIG_VB.w} ${FIG_VB.h}" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">`;
+  const V = VIEWS.front;
+  let s = `<svg class="portrait" viewBox="${V.x} 0 ${V.w} 300" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">`;
   if (who.ghost && !who.charId) {
     return `${s}<g transform="translate(0 -12)">${GHOST_INNER}</g><circle class="gun-tip" cx="30" cy="80" r="1" fill="none"/></svg>`;
   }
@@ -596,6 +615,9 @@ function gunmanSVG(who, angle) {
   s += `<path d="M42 208 L36 286 L54 286 L60 228 L64 286 L82 286 L78 208 Z" fill="${pants}" ${INK}/>`;
   s += `<path d="M32 282 L54 282 L55 298 L22 298 Q24 287 32 282 Z M64 282 L86 282 Q93 287 94 298 L63 298 Z" fill="#3a2414" ${INK}/>`;
   s += bodyCore(L, 'M10 140 L2 258 L40 262 L46 214 L74 214 L80 262 L118 258 L110 140 Z');
+  // Sombras em retícula e hachura, como nos gibis antigos
+  s += '<path d="M10 140 L44 150 L40 262 L2 258 Z" fill="url(#ht)"/>';
+  s += '<path d="M80 214 L118 258 L80 262 Z" fill="url(#hatch)"/>';
   // Braço livre
   s += `<path d="M98 128 Q112 168 104 198 L92 198 Q98 168 86 136 Z" fill="${L.coat}" ${INK}/>`;
   s += `<ellipse cx="98" cy="202" rx="7" ry="6" fill="${L.skin}" ${INK}/>`;
@@ -605,27 +627,112 @@ function gunmanSVG(who, angle) {
   return s + '</svg>';
 }
 
+/* Chapéu visto de trás, com traço grosso e sombra em retícula. */
+function hatBack(L) {
+  const c = L.hatColor;
+  if (L.hat === 'flat') {
+    return `<path d="M30 58 Q95 44 160 58 Q156 70 95 72 Q34 70 30 58 Z" fill="${c}" ${INK}/>` +
+      `<path d="M72 58 L72 26 L118 26 L118 58 Q95 62 72 58 Z" fill="${c}" ${INK}/>` +
+      '<path d="M100 26 L118 26 L118 58 L100 60 Z" fill="url(#ht)"/>';
+  }
+  if (L.hat === 'bowler') {
+    return `<path d="M58 60 Q95 50 132 60 Q128 68 95 69 Q62 68 58 60 Z" fill="${c}" ${INK}/>` +
+      `<path d="M70 60 Q68 24 95 22 Q122 24 120 60 Q95 64 70 60 Z" fill="${c}" ${INK}/>` +
+      '<path d="M100 23 Q122 26 120 60 L102 62 Z" fill="url(#ht)"/>' +
+      `<path d="M71 52 Q95 57 119 52 L120 60 Q95 64 70 60 Z" fill="${L.hatBand}" ${INK}/>`;
+  }
+  return `<path d="M38 58 Q95 42 152 58 Q150 70 95 73 Q40 70 38 58 Z" fill="${c}" ${INK}/>` +
+    '<path d="M110 60 Q140 58 152 58 Q150 68 112 71 Z" fill="url(#ht)"/>' +
+    `<path d="M68 60 L73 30 L86 22 L104 22 L117 30 L122 60 Q95 66 68 60 Z" fill="${c}" ${INK}/>` +
+    '<path d="M95 24 L104 22 L117 30 L122 60 L100 63 Z" fill="url(#ht)"/>' +
+    '<path d="M86 22 Q92 30 95 24" fill="none" stroke="#141010" stroke-width="1.6"/>' +
+    `<path d="M69 52 Q95 58 121 52 L122 60 Q95 66 68 60 Z" fill="${L.hatBand}" ${INK}/>`;
+}
+
+/* Pistoleiro de costas para a tela (o jogador na hora do tiro), no traço de
+ * gibi antigo de faroeste: tinta preta grossa, cores chapadas e sombras em
+ * retícula. Braço do revólver esticado para a direita (a CSS espelha do lado
+ * esquerdo), girado ao contrário da inclinação para a arma ficar na horizontal. */
+function backSVG(who, angle = 0) {
+  const L = getChar(who.charId).look;
+  const coat = L.coat;
+  const pants = L.pants || '#3b302a';
+  const scarf = L.scarf || '#b3241a';
+  let s = `<svg class="portrait" viewBox="0 0 ${VIEWS.back.w} 300" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">`;
+
+  // Pernas e botas
+  s += `<path d="M70 248 L93 248 L91 288 L69 288 Z M98 248 L122 248 L125 288 L102 288 Z" fill="${pants}" ${INK}/>`;
+  s += '<path d="M108 248 L122 248 L125 288 L110 288 Z" fill="url(#hatch)"/>';
+  s += `<path d="M66 284 L92 284 L93 300 L60 300 Q61 290 66 284 Z M101 284 L126 284 Q132 290 132 300 L100 300 Z" fill="#3a2414" ${INK}/>`;
+
+  // Coldre no quadril direito, aparecendo pela abertura do casaco
+  s += `<path d="M126 196 L141 193 L146 240 L131 244 Z" fill="#8a4e22" ${INK}/>`;
+  s += `<path d="M129 183 L139 183 L140 196 L129 197 Z" fill="#4a2c16" ${INK}/>`;
+
+  // Guarda-pó: cor chapada, sombra em retícula do lado direito e dobras em tinta
+  s += `<path d="M58 98 L132 98 L140 150 L150 262 L95 270 L40 266 L50 150 Z" fill="${coat}" ${INK}/>`;
+  s += '<path d="M112 100 L132 98 L140 150 L150 262 L108 268 Z" fill="url(#ht)"/>';
+  s += '<path d="M130 120 L140 150 L150 262 L140 263 Z" fill="#141010"/>';
+  s += '<path d="M42 230 L40 266 L92 268 L92 240 Z" fill="url(#hatch)"/>';
+  s += '<path d="M93 184 L92 268 M70 150 Q66 200 60 262 M118 160 Q124 210 128 262" fill="none" stroke="#141010" stroke-width="2"/>';
+  if (L.poncho) {
+    s += `<path d="M42 100 L148 100 L160 196 L30 196 Z" fill="${coat}" ${INK}/>`;
+    s += '<path d="M110 100 L148 100 L160 196 L112 196 Z" fill="url(#ht)"/>';
+    s += `<path d="M36 172 L154 172" stroke="${L.accent}" stroke-width="5"/><path d="M34 182 L156 182" stroke="#f3e2bd" stroke-width="2"/>`;
+  }
+
+  // Braço livre (do lado da parede): de costas só aparece o cotovelo
+  s += `<path d="M58 100 L42 150 L50 186 L66 180 L66 130 Z" fill="${coat}" ${INK}/>`;
+  s += '<path d="M42 150 L50 186 L58 183 L50 152 Z" fill="url(#ht)"/>';
+
+  // Pescoço, lenço, nuca e orelhas
+  s += `<path d="M84 80 L106 80 L105 96 L85 96 Z" fill="${L.skin}" ${INK}/>`;
+  s += '<path d="M84 80 L106 80 L105 88 L85 88 Z" fill="url(#ht)"/>';
+  s += `<path d="M76 92 L114 92 L106 104 L95 116 L84 104 Z" fill="${scarf}" ${INK}/>`;
+  s += '<path d="M100 92 L114 92 L106 104 L95 116 Z" fill="url(#ht)"/>';
+  s += `<ellipse cx="77" cy="72" rx="4" ry="6" fill="${L.skin}" ${INK}/><ellipse cx="113" cy="72" rx="4" ry="6" fill="${L.skin}" ${INK}/>`;
+  s += `<path d="M77 62 Q78 88 95 90 Q112 88 113 62 Z" fill="${L.hair}" ${INK}/>`;
+  s += '<path d="M82 66 Q86 80 90 86 M95 66 L95 88 M106 66 Q104 80 100 86" fill="none" stroke="#141010" stroke-width="1.4"/>';
+  if (L.hairStyle === 'long') {
+    s += `<path d="M76 62 Q70 108 82 132 L108 132 Q120 108 114 62 Z" fill="${L.hair}" ${INK}/>`;
+    s += '<path d="M84 70 Q80 104 88 130 M95 70 L95 130 M106 70 Q110 104 102 130" fill="none" stroke="#141010" stroke-width="1.4"/>';
+  }
+  s += hatBack(L);
+
+  // Braço do revólver, esticado para fora da parede
+  s += `<g transform="rotate(${-angle} 128 106)">`;
+  s += `<path d="M120 98 L174 102 L175 117 L126 126 Z" fill="${coat}" ${INK}/>`;
+  s += '<path d="M126 116 L175 111 L175 117 L126 126 Z" fill="url(#ht)"/>';
+  s += `<path d="M172 100 L180 101 L180 119 L172 119 Z" fill="${coat}" ${INK}/>`;
+  s += `<rect x="178" y="98" width="11" height="11" rx="3" fill="#7d838b" ${INK}/>`;
+  s += `<rect x="187" y="101" width="22" height="5" rx="1" fill="#b8bec6" ${INK}/>`;
+  s += `<path d="M180 108 L188 108 L186 122 L179 121 Z" fill="#6a3d1c" ${INK}/>`;
+  s += `<ellipse cx="183" cy="112" rx="6" ry="7" fill="${L.skin}" ${INK}/>`;
+  s += '<circle class="gun-tip" cx="210" cy="103.5" r="1" fill="none"/></g>';
+  return s + '</svg>';
+}
+
 /* Cenário: rua de cidade de faroeste ao entardecer (estilo quadrinhos). */
 const TOWN_SVG = `
 <svg viewBox="0 0 400 250" preserveAspectRatio="xMidYMax slice" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
   <defs>
     <linearGradient id="town-sky" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#bcd9dc"/><stop offset=".55" stop-color="#f6e6bc"/><stop offset="1" stop-color="#f3cf92"/>
+      <stop offset="0" stop-color="#f4cf6a"/><stop offset=".6" stop-color="#f8e3a3"/><stop offset="1" stop-color="#f1b866"/>
     </linearGradient>
     <linearGradient id="town-ground" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#e8c48e"/><stop offset="1" stop-color="#c98f52"/>
+      <stop offset="0" stop-color="#e9b465"/><stop offset="1" stop-color="#c77a35"/>
     </linearGradient>
   </defs>
   <rect width="400" height="250" fill="url(#town-sky)"/>
-  <circle cx="230" cy="96" r="46" fill="#fff6dc" opacity=".55"/>
-  <g stroke="#4a3220" stroke-width="1.4" stroke-linejoin="round">
+  <circle cx="230" cy="96" r="40" fill="#fff4cf" stroke="#141010" stroke-width="1.5"/><circle cx="230" cy="96" r="40" fill="url(#ht-light)" opacity=".5"/>
+  <g stroke="#141010" stroke-width="2" stroke-linejoin="round">
     <!-- prédios da esquerda -->
-    <path d="M-10 46 L30 46 L30 38 L66 38 L66 152 L-10 152 Z" fill="#cdb08a"/>
-    <path d="M66 74 L118 74 L118 64 L140 64 L140 152 L66 152 Z" fill="#d9bf98"/>
-    <path d="M140 102 L170 102 L170 96 L182 96 L182 152 L140 152 Z" fill="#e3cfae"/>
-    <path d="M-10 108 L74 102 L74 108 L-10 114 Z" fill="#a8845a"/>
-    <path d="M66 118 L146 114 L146 119 L66 123 Z" fill="#b8956a"/>
-    <g fill="#6b4a30">
+    <path d="M-10 46 L30 46 L30 38 L66 38 L66 152 L-10 152 Z" fill="#cf8f55"/>
+    <path d="M66 74 L118 74 L118 64 L140 64 L140 152 L66 152 Z" fill="#dda56b"/>
+    <path d="M140 102 L170 102 L170 96 L182 96 L182 152 L140 152 Z" fill="#e9bf86"/>
+    <path d="M-10 108 L74 102 L74 108 L-10 114 Z" fill="#8e5a30"/>
+    <path d="M66 118 L146 114 L146 119 L66 123 Z" fill="#9c6638"/>
+    <g fill="#2e1c12">
       <rect x="6" y="58" width="10" height="16"/><rect x="34" y="58" width="10" height="16"/>
       <rect x="80" y="84" width="9" height="14"/><rect x="100" y="84" width="9" height="14"/><rect x="124" y="84" width="9" height="14"/>
       <rect x="150" y="110" width="6" height="9"/><rect x="164" y="110" width="6" height="9"/>
@@ -633,12 +740,12 @@ const TOWN_SVG = `
     </g>
     <path d="M6 114 L6 152 M44 111 L44 152 M74 122 L74 152 M110 120 L110 152 M140 118 L140 152" fill="none"/>
     <!-- prédios da direita -->
-    <path d="M222 100 L236 100 L236 94 L268 94 L268 152 L222 152 Z" fill="#e3cfae"/>
-    <path d="M268 66 L300 66 L300 56 L340 56 L340 152 L268 152 Z" fill="#d9bf98"/>
-    <path d="M340 30 L410 30 L410 152 L340 152 Z" fill="#cdb08a"/>
-    <path d="M262 116 L346 112 L346 118 L262 122 Z" fill="#b8956a"/>
-    <rect x="282" y="72" width="44" height="12" fill="#7a2a1c"/>
-    <g fill="#6b4a30">
+    <path d="M222 100 L236 100 L236 94 L268 94 L268 152 L222 152 Z" fill="#e9bf86"/>
+    <path d="M268 66 L300 66 L300 56 L340 56 L340 152 L268 152 Z" fill="#dda56b"/>
+    <path d="M340 30 L410 30 L410 152 L340 152 Z" fill="#cf8f55"/>
+    <path d="M262 116 L346 112 L346 118 L262 122 Z" fill="#9c6638"/>
+    <rect x="282" y="72" width="44" height="12" fill="#b3241a"/>
+    <g fill="#2e1c12">
       <rect x="230" y="108" width="7" height="10"/><rect x="250" y="108" width="7" height="10"/>
       <rect x="280" y="92" width="9" height="14"/><rect x="306" y="92" width="9" height="14"/>
       <rect x="354" y="44" width="11" height="17"/><rect x="380" y="44" width="11" height="17"/>
@@ -648,13 +755,16 @@ const TOWN_SVG = `
     <path d="M268 121 L268 152 M300 119 L300 152 M340 117 L340 152" fill="none"/>
     <!-- poste de amarrar cavalos e barril -->
     <path d="M150 140 L150 156 M196 140 L196 156 M146 142 L200 142" stroke-width="2.2" fill="none"/>
-    <path d="M206 142 L220 142 L222 158 L204 158 Z" fill="#9a6a3a"/>
+    <path d="M206 142 L220 142 L222 158 L204 158 Z" fill="#8e5a30"/>
   </g>
   <text x="304" y="81.5" font-family="Rye, Georgia, serif" font-size="9" text-anchor="middle" fill="#f6e7c4">SALOON</text>
+  <!-- sombras em retícula -->
+  <path d="M30 46 L66 38 L66 152 L30 152 Z M118 64 L140 64 L140 152 L118 152 Z M300 56 L340 56 L340 152 L300 152 Z" fill="url(#ht)" opacity=".45"/>
   <!-- rua de terra -->
   <path d="M-10 150 L410 150 L410 260 L-10 260 Z" fill="url(#town-ground)"/>
-  <path d="M-10 150 L410 150" stroke="#9a6a3a" stroke-width="1.2"/>
-  <g stroke="#c08850" stroke-width="1.6" stroke-linecap="round" fill="none" opacity=".8">
+  <path d="M-10 150 L410 150" stroke="#141010" stroke-width="2"/>
+  <rect x="-10" y="200" width="420" height="60" fill="url(#ht-light)" opacity=".35"/>
+  <g stroke="#141010" stroke-width="1.4" stroke-linecap="round" fill="none" opacity=".55">
     <path d="M196 156 L120 250"/><path d="M214 156 L300 250"/>
     <path d="M40 176 L70 174"/><path d="M300 170 L338 172"/><path d="M150 210 L190 208"/><path d="M250 228 L296 226"/><path d="M20 230 L60 232"/>
   </g>
@@ -1147,11 +1257,14 @@ function showCenter(id) {
 /* Pistoleiro que se inclina para fora de um lado da parede. A camada
  * "lean-clip" esconde o que passa para o outro lado da parede ou para
  * baixo do chão (o corpo fica escondido atrás dela). */
-function gunmanHTML(who, i, extra = '') {
+function gunmanHTML(who, i, view, extra = '') {
   const side = i % 2 === 0 ? 'side-left' : 'side-right';
   const angle = LEAN[Math.floor(i / 2)].angle;
-  return `<div class="lean-clip ${side}"><div class="gunman ${who.ghost ? 'ghosty' : ''} ${extra}"
-            data-slot="${i}">${gunmanSVG(who, angle)}</div></div>`;
+  const art = view === 'back' ? backSVG(who, angle) : gunmanSVG(who, angle);
+  // O jogador fica na frente da parede (de costas para a tela); o rival, atrás da dele
+  const clip = view === 'back' ? 'ground' : side;
+  return `<div class="lean-clip ${clip}"><div class="gunman ${who.ghost ? 'ghosty' : ''} ${extra}"
+            data-slot="${i}" data-view="${view}">${art}</div></div>`;
 }
 
 /* Calcula em pixels a posição de cada marcador e do pistoleiro inclinado,
@@ -1185,19 +1298,23 @@ function layoutScene(scene) {
       }
       // Pés (pivô) ficam na linha do corpo, atrás da parede
       const left = i % 2 === 0;
+      const V = VIEWS[el.dataset.view];
+      const feetFrac = (V.feet - V.x) / V.w;
       const a = (LEAN[Math.floor(i / 2)].angle * Math.PI) / 180;
-      const d = FIG_HEAD_D * h;
+      const d = ((300 - V.head) / 300) * h;
       const feetX = p.x + (left ? 1 : -1) * d * Math.sin(a);
       const feetY = p.y + d * Math.cos(a);
-      const w = (h * FIG_VB.w) / FIG_VB.h;
+      const w = (h * V.w) / 300;
       const clip = el.parentElement;
       el.style.width = `${w}px`;
       el.style.height = `${h}px`;
-      el.style.left = `${feetX - FIG_FEET_X * w - clip.offsetLeft}px`;
+      el.style.left = `${feetX - feetFrac * w - clip.offsetLeft}px`;
       el.style.top = `${feetY - h - clip.offsetTop}px`;
-      el.style.transformOrigin = `${FIG_FEET_X * w}px ${h}px`;
+      el.style.transformOrigin = `${feetFrac * w}px ${h}px`;
       el.style.setProperty('--lean', `${(left ? -1 : 1) * LEAN[Math.floor(i / 2)].angle}deg`);
-      el.style.setProperty('--mir', left ? 1 : -1);
+      // De frente o desenho olha para a esquerda; de costas, para a direita
+      const facesLeft = el.dataset.view === 'front';
+      el.style.setProperty('--mir', left === facesLeft ? 1 : -1);
     });
   });
 }
@@ -1224,9 +1341,9 @@ function sceneHTML({ mode, self, opp, pos = null, targets = [], oppPos = null })
       enemy += `<span class="spot-anchor" data-slot="${i}"></span>`;
     }
   }
-  const myPeek = pos !== null ? gunmanHTML(self, pos, choosing ? 'out' : '') : '';
+  const myPeek = pos !== null ? gunmanHTML(self, pos, 'back', choosing ? 'out' : '') : '';
   const idle = !choosing || pos === null ? `<div class="idle">${fullBodySVG(self)}</div>` : '';
-  const oppPeek = oppPos !== null ? gunmanHTML(opp, oppPos) : '';
+  const oppPeek = oppPos !== null ? gunmanHTML(opp, oppPos, 'front') : '';
   return `
     <div class="scene-bg">${TOWN_SVG.replace(/town-/g, `${mode}-town-`)}</div>
     <div class="wall-area enemy-area">
@@ -1264,7 +1381,7 @@ function renderChoice() {
   layoutScene(scene);
   scene.classList.toggle('step-1', c.pos === null);
   scene.classList.toggle('step-2', c.pos !== null && placed < shots);
-  if (client.freshSlot === 'own') scene.querySelector('.gunman').classList.add('fresh');
+  if (client.freshSlot === 'own') scene.querySelector('.gunman').classList.add('turn');
   if (client.freshSlot !== null && client.freshSlot !== 'own') {
     const t = scene.querySelector(`[data-target-slot="${client.freshSlot}"]`);
     if (t) t.classList.add('fresh');
@@ -1491,6 +1608,16 @@ function fireShot(fromArea, toArea, shooter) {
   void fig.offsetWidth;
   fig.classList.add('recoil');
   fx('muzzle', from.x, from.y, 260);
+  fx(`sfx ${fromArea === 'my-area' ? '' : 'far'}`, from.x, from.y - 34, 900, 'BANG!');
+  // Fumaça saindo do cano logo depois do clarão
+  setTimeout(() => {
+    const dir = Math.sign(to.x - from.x) || 1;
+    for (let k = 0; k < 5; k++) {
+      const puff = fx('smoke-puff', from.x + dir * k * 5, from.y, 1100);
+      puff.style.setProperty('--dx', `${dir * (14 + Math.random() * 26)}px`);
+      puff.style.setProperty('--dy', `${-8 - Math.random() * 22}px`);
+    }
+  }, 120);
   const dx = tx - from.x;
   const dy = ty - from.y;
   const tracer = fx('tracer', from.x, from.y, 420);
@@ -1545,10 +1672,14 @@ async function runReveal(duel) {
   await banner('FOGO!', 450, 'fire');
 
   // Os dois saem de trás da parede ao mesmo tempo
-  scene.querySelector('.idle').classList.add('gone');
-  scene.querySelectorAll('.gunman').forEach((p) => p.classList.add('out'));
+  // Ele se vira de costas para a tela e se inclina para atirar
+  scene.querySelector('.idle').classList.add('turning');
   Sound.pop();
-  await sleep(750);
+  await sleep(180);
+  scene.querySelector('.idle').classList.add('gone');
+  scene.querySelector('.my-area .gunman').classList.add('out', 'turn');
+  scene.querySelector('.enemy-area .gunman').classList.add('out');
+  await sleep(800);
 
   for (let k = 0; k < duel.volleys.length; k++) {
     if (k > 0) await banner(`${k + 1}º disparo!`, 650, 'small');

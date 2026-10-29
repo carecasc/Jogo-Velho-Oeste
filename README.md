@@ -25,7 +25,7 @@ Quem cria a sala recebe um **código de 4 letras** e um link para compartilhar. 
 2. Todos começam com **5 de vida** (as lâmpadas do placar).
 3. A cada rodada os vivos são sorteados em **duelos 1 contra 1**. O rodízio evita repetir o adversário das últimas rodadas.
 4. Cada pistoleiro se esconde atrás de uma parede, com **6 posições**: lado esquerdo ou direito, em cima, no meio ou embaixo.
-5. Na tela do duelo, seu pistoleiro aparece encostado na sua parede (em primeiro plano) e a parede do rival fica ao fundo. Em segredo, você escolhe **primeiro onde aparecer** e **depois onde o tiro vai chegar**. Cada tiro que acerta tira vida do rival.
+5. Na tela do duelo, seu pistoleiro espera **de frente para a tela**, encostado na sua parede (em primeiro plano), e a parede do rival fica ao fundo. Na hora do tiro ele **se vira de costas** e se inclina para fora da parede: de pé (em cima), agachado (meio) ou quase deitado (embaixo). Em segredo, você escolhe **primeiro onde aparecer** e **depois onde o tiro vai chegar**. Cada tiro que acerta tira vida do rival.
 6. Há **30 segundos** por rodada. Quem não escolher a tempo aparece em **Em cima · Esquerda** e atira em **Em cima · Esquerda**.
 7. A **1ª rodada** é só com 1 tiro para todo mundo.
 8. Da **2ª rodada em diante**, cada jogador recebe **1 de ouro**, mais **1 de ouro por acerto** na rodada anterior. O ouro **não acumula**: o que sobrar se perde.
@@ -46,6 +46,6 @@ Quem recarrega a página ou perde a conexão volta para a mesma sala automaticam
 ## Arquivos
 
 - `index.html`: telas (início, saguão, partida, fim de jogo).
-- `style.css`: visual de fliperama (letreiros com lâmpadas), cena do duelo em rua de faroeste estilo quadrinhos e layout responsivo.
+- `style.css`: visual de fliperama (letreiros com lâmpadas), cena do duelo no estilo de gibi antigo de faroeste (tinta preta, cores chapadas, retícula de pontos) e layout responsivo.
 - `game.js`: cliente: conexão com o servidor, placar, loja de cartas, escolha secreta, animação da revelação, sons (Web Audio API) e desenhos em SVG (pistoleiros, paredes, cidade e cartas de pôquer).
 - `server.js`: servidor: arquivos estáticos, WebSocket próprio, salas, pareamento em rodízio, ouro e cartas, resolução dos tiros e eliminações.

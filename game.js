@@ -559,17 +559,19 @@ function fullBodySVG(who) {
   return s;
 }
 
-/* Poses de tiro: é o mesmo pistoleiro de corpo inteiro, saindo de trás da
- * parede com o braço esticado. Cada altura tem uma pose:
- * em cima = de pé, meio = ajoelhado, embaixo = deitado.
- * vb: viewBox; hx: posição da cabeça na largura (%); tip: ponta do cano
- * (frações da caixa), usada para o clarão do tiro. */
-const POSES = {
-  stand: { vb: '-37 0 167 300', hx: 58.1, tip: [0.036, 0.37] },
-  kneel: { vb: '-37 0 177 240', hx: 54.8, tip: [0.034, 0.46] },
-  prone: { vb: '-41 22 221 130', hx: 45.7, tip: [0.027, 0.9] },
-};
-const ROW_POSE = ['stand', 'kneel', 'prone'];
+/* Inclinação para atirar: é o mesmo pistoleiro de corpo inteiro, que gira
+ * sobre os pés atrás da parede e põe o corpo para fora. Para cada altura:
+ * head = altura da cabeça acima do chão (fração da altura do pistoleiro);
+ * angle = inclinação do corpo em graus.
+ * Em cima: de pé, quase reto; meio: agachado; embaixo: quase deitado. */
+const LEAN = [
+  { head: 0.62, angle: 14 },
+  { head: 0.42, angle: 32 },
+  { head: 0.21, angle: 56 },
+];
+const FIG_VB = { x: -37, w: 167, h: 300 };      // viewBox do pistoleiro
+const FIG_FEET_X = (60 - FIG_VB.x) / FIG_VB.w;   // pés (pivô) na largura
+const FIG_HEAD_D = (300 - 72) / 300;             // distância pés-cabeça / altura
 
 /* Braço esticado com o revólver; (hx, hy) é a mão. */
 function gunArm(L, shoulder, hx, hy) {
@@ -580,44 +582,25 @@ function gunArm(L, shoulder, hx, hy) {
   return s;
 }
 
-/* Pistoleiro em pose de tiro, olhando para a esquerda (a CSS espelha
- * quando ele sai pelo lado direito da parede). */
-function gunmanSVG(who, pose) {
-  const P = POSES[pose];
-  let s = `<svg class="portrait" viewBox="${P.vb}" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">`;
-  // Fantasma genérico: lençol flutuando na mesma altura da cabeça
-  if (who.ghost && !who.charId) return `${s}<g transform="translate(0 -12)">${GHOST_INNER}</g></svg>`;
+/* Pistoleiro de pé com o revólver apontado, olhando para a esquerda (a CSS
+ * espelha do lado direito). O braço é girado ao contrário da inclinação do
+ * corpo, para a arma continuar na horizontal quando ele se inclina.
+ * O círculo "gun-tip" marca a ponta do cano (origem do clarão do tiro). */
+function gunmanSVG(who, angle) {
+  let s = `<svg class="portrait" viewBox="${FIG_VB.x} 0 ${FIG_VB.w} ${FIG_VB.h}" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">`;
+  if (who.ghost && !who.charId) {
+    return `${s}<g transform="translate(0 -12)">${GHOST_INNER}</g><circle class="gun-tip" cx="30" cy="80" r="1" fill="none"/></svg>`;
+  }
   const L = getChar(who.charId).look;
   const pants = L.pants || '#3b302a';
-  const boot = '#3a2414';
-
-  if (pose === 'stand') {
-    s += `<path d="M42 208 L36 286 L54 286 L60 228 L64 286 L82 286 L78 208 Z" fill="${pants}" ${INK}/>`;
-    s += `<path d="M32 282 L54 282 L55 298 L22 298 Q24 287 32 282 Z M64 282 L86 282 Q93 287 94 298 L63 298 Z" fill="${boot}" ${INK}/>`;
-    s += bodyCore(L, 'M10 140 L2 258 L40 262 L46 214 L74 214 L80 262 L118 258 L110 140 Z');
-  } else if (pose === 'kneel') {
-    // Perna de trás com o joelho no chão; perna da frente dobrada
-    s += `<path d="M64 204 L80 234 L98 230 L82 200 Z" fill="${pants}" ${INK}/>`;
-    s += `<path d="M82 226 L126 226 L126 240 L82 240 Z" fill="${pants}" ${INK}/>`;
-    s += `<path d="M118 220 L136 222 L138 240 L116 240 Z" fill="${boot}" ${INK}/>`;
-    s += bodyCore(L, 'M10 140 L6 222 L40 226 L46 210 L74 210 L80 226 L114 222 L110 140 Z');
-    s += `<path d="M46 200 L8 198 L8 216 L50 218 Z" fill="${pants}" ${INK}/>`;
-    s += `<path d="M8 204 L2 232 L20 232 L26 208 Z" fill="${pants}" ${INK}/>`;
-    s += `<path d="M-4 228 L22 228 L24 240 L-10 240 Q-9 232 -4 228 Z" fill="${boot}" ${INK}/>`;
-  } else {
-    // Deitado de bruços: o corpo segue para trás da parede
-    s += `<path d="M120 126 L184 124 L184 148 L120 152 Z" fill="${pants}" ${INK}/>`;
-    s += `<path d="M58 116 L128 120 L130 152 L58 152 Z" fill="${L.coat}" ${INK}/>`;
-    s += `<rect x="112" y="120" width="8" height="32" fill="#5a3519" ${INK}/>`;
-  }
-
-  // Braço livre (do lado de dentro da parede)
-  if (pose !== 'prone') {
-    s += `<path d="M98 128 Q112 168 104 198 L92 198 Q98 168 86 136 Z" fill="${L.coat}" ${INK}/>`;
-    s += `<ellipse cx="98" cy="202" rx="7" ry="6" fill="${L.skin}" ${INK}/>`;
-  }
-  // Braço do revólver, esticado para fora da parede
-  s += pose === 'prone' ? gunArm(L, [30, 136], 0, 142) : gunArm(L, [30, 124], 4, 114);
+  s += `<path d="M42 208 L36 286 L54 286 L60 228 L64 286 L82 286 L78 208 Z" fill="${pants}" ${INK}/>`;
+  s += `<path d="M32 282 L54 282 L55 298 L22 298 Q24 287 32 282 Z M64 282 L86 282 Q93 287 94 298 L63 298 Z" fill="#3a2414" ${INK}/>`;
+  s += bodyCore(L, 'M10 140 L2 258 L40 262 L46 214 L74 214 L80 262 L118 258 L110 140 Z');
+  // Braço livre
+  s += `<path d="M98 128 Q112 168 104 198 L92 198 Q98 168 86 136 Z" fill="${L.coat}" ${INK}/>`;
+  s += `<ellipse cx="98" cy="202" rx="7" ry="6" fill="${L.skin}" ${INK}/>`;
+  // Braço do revólver, compensando a inclinação
+  s += `<g transform="rotate(${angle} 30 124)">${gunArm(L, [30, 124], 4, 114)}<circle class="gun-tip" cx="-33" cy="111" r="1" fill="none"/></g>`;
   s += portraitInner(L);
   return s + '</svg>';
 }
@@ -1161,18 +1144,62 @@ function showCenter(id) {
  * ao fundo, à direita, a parede do rival. As 6 posições ficam nas laterais
  * de cada parede (esquerda/direita x em cima/meio/embaixo). */
 
-/* Classes de posição: coluna (esquerda/direita) e linha (em cima/meio/embaixo).
- * A CSS coloca cada marcador na altura da cabeça da pose daquela linha. */
-function posClass(i) {
-  return `pos-c${i % 2} pos-r${Math.floor(i / 2)}`;
-}
-
-/* Pistoleiro de corpo inteiro saindo por um lado da parede. */
+/* Pistoleiro que se inclina para fora de um lado da parede. A camada
+ * "lean-clip" esconde o que passa para o outro lado da parede ou para
+ * baixo do chão (o corpo fica escondido atrás dela). */
 function gunmanHTML(who, i, extra = '') {
   const side = i % 2 === 0 ? 'side-left' : 'side-right';
-  const pose = ROW_POSE[Math.floor(i / 2)];
-  return `<div class="gunman pose-${pose} ${side} ${posClass(i)} ${who.ghost ? 'ghosty' : ''} ${extra}"
-               data-pose="${pose}" style="--hx:${POSES[pose].hx}%">${gunmanSVG(who, pose)}</div>`;
+  const angle = LEAN[Math.floor(i / 2)].angle;
+  return `<div class="lean-clip ${side}"><div class="gunman ${who.ghost ? 'ghosty' : ''} ${extra}"
+            data-slot="${i}">${gunmanSVG(who, angle)}</div></div>`;
+}
+
+/* Calcula em pixels a posição de cada marcador e do pistoleiro inclinado,
+ * para a cabeça cair exatamente no marcador em qualquer tamanho de tela. */
+function layoutScene(scene) {
+  scene.querySelectorAll('.wall-area').forEach((area) => {
+    const W = area.clientWidth;
+    const H = area.clientHeight;
+    if (!W || !H) return;
+    const cs = getComputedStyle(area);
+    const fig = parseFloat(cs.getPropertyValue('--fig'));
+    const wl = parseFloat(cs.getPropertyValue('--wall-l')) / 100;
+    const h = fig * H;   // altura do pistoleiro em pé
+
+    // Cabeça: um pouco para fora da borda da parede, na altura da linha
+    const headAt = (i) => {
+      const left = i % 2 === 0;
+      return {
+        x: left ? W * wl - 0.09 * h : W * (1 - wl) + 0.09 * h,
+        y: H - LEAN[Math.floor(i / 2)].head * h,
+      };
+    };
+
+    area.querySelectorAll('[data-slot]').forEach((el) => {
+      const i = Number(el.dataset.slot);
+      const p = headAt(i);
+      if (!el.classList.contains('gunman')) {
+        el.style.left = `${p.x}px`;
+        el.style.top = `${p.y}px`;
+        return;
+      }
+      // Pés (pivô) ficam na linha do corpo, atrás da parede
+      const left = i % 2 === 0;
+      const a = (LEAN[Math.floor(i / 2)].angle * Math.PI) / 180;
+      const d = FIG_HEAD_D * h;
+      const feetX = p.x + (left ? 1 : -1) * d * Math.sin(a);
+      const feetY = p.y + d * Math.cos(a);
+      const w = (h * FIG_VB.w) / FIG_VB.h;
+      const clip = el.parentElement;
+      el.style.width = `${w}px`;
+      el.style.height = `${h}px`;
+      el.style.left = `${feetX - FIG_FEET_X * w - clip.offsetLeft}px`;
+      el.style.top = `${feetY - h - clip.offsetTop}px`;
+      el.style.transformOrigin = `${FIG_FEET_X * w}px ${h}px`;
+      el.style.setProperty('--lean', `${(left ? -1 : 1) * LEAN[Math.floor(i / 2)].angle}deg`);
+      el.style.setProperty('--mir', left ? 1 : -1);
+    });
+  });
 }
 
 /* Monta a cena. mode 'choose': botões para escolher; 'reveal': só desenho. */
@@ -1187,14 +1214,14 @@ function sceneHTML({ mode, self, opp, pos = null, targets = [], oppPos = null })
       // Números dos tiros que vão nesta posição (ex.: "1", "2" ou "1+2")
       const shotsHere = targets.map((t, k) => (t === i ? k + 1 : null)).filter(Boolean);
       const tgt = shotsHere.length > 0;
-      mine += `<button type="button" class="spot own ${posClass(i)} ${own ? 'selected' : ''}"
+      mine += `<button type="button" class="spot own ${own ? 'selected' : ''}" data-slot="${i}"
                  data-own-slot="${i}" aria-pressed="${own}" aria-label="Aparecer em ${posName(i)}"></button>`;
-      enemy += `<button type="button" class="spot target ${posClass(i)} ${tgt ? 'selected' : ''} ${pos === null ? 'locked' : ''}"
+      enemy += `<button type="button" class="spot target ${tgt ? 'selected' : ''} ${pos === null ? 'locked' : ''}" data-slot="${i}"
                   data-target-slot="${i}" aria-pressed="${tgt}" aria-label="Atirar em ${posName(i)}">${tgt ? CROSSHAIR_SVG + (multi ? `<span class="shot-num">${shotsHere.join('+')}</span>` : '') : ''}</button>`;
     } else {
       // Marcadores invisíveis que servem de mira para os efeitos
-      mine += `<span class="spot-anchor ${posClass(i)}"></span>`;
-      enemy += `<span class="spot-anchor ${posClass(i)}"></span>`;
+      mine += `<span class="spot-anchor" data-slot="${i}"></span>`;
+      enemy += `<span class="spot-anchor" data-slot="${i}"></span>`;
     }
   }
   const myPeek = pos !== null ? gunmanHTML(self, pos, choosing ? 'out' : '') : '';
@@ -1234,6 +1261,7 @@ function renderChoice() {
   const scene = $('choice-scene');
   const placed = c.targets.length;
   scene.innerHTML = sceneHTML({ mode: 'choose', self, opp, pos: c.pos, targets: c.targets });
+  layoutScene(scene);
   scene.classList.toggle('step-1', c.pos === null);
   scene.classList.toggle('step-2', c.pos !== null && placed < shots);
   if (client.freshSlot === 'own') scene.querySelector('.gunman').classList.add('fresh');
@@ -1442,10 +1470,10 @@ function splinters(x, y, scale = 1) {
 /* Buraco de bala na borda da parede, ao lado da posição errada. */
 function bulletHole(area, pos) {
   const hole = document.createElement('span');
-  hole.className = `hole pos-r${Math.floor(pos / 2)}`;
+  hole.className = 'hole';
   const edge = pos % 2 === 0 ? 'calc(var(--wall-l) + 6px)' : 'calc(100% - var(--wall-l) - 6px)';
   hole.style.left = edge;
-  hole.style.marginTop = `${(Math.random() - 0.5) * 24}px`;
+  hole.style.top = `${parseFloat(anchorOf(area, pos).style.top) + (Math.random() - 0.5) * 24}px`;
   $('arena-scene').querySelector(`.${area}`).appendChild(hole);
 }
 
@@ -1453,15 +1481,8 @@ function bulletHole(area, pos) {
 function fireShot(fromArea, toArea, shooter) {
   const arena = $('arena');
   const fig = $('arena-scene').querySelector(`.${fromArea} .gunman`);
-  const r = fig.getBoundingClientRect();
-  const b = arena.getBoundingClientRect();
-  const left = fig.classList.contains('side-left');
-  // Ponta do cano do revólver (depende da pose)
-  const [tipX, tipY] = POSES[fig.dataset.pose].tip;
-  const from = {
-    x: (left ? r.left + r.width * tipX : r.right - r.width * tipX) - b.left,
-    y: r.top - b.top + r.height * tipY,
-  };
+  // Ponta do cano do revólver (já com a inclinação aplicada)
+  const from = centerIn(fig.querySelector('.gun-tip'), arena);
   const to = centerIn(anchorOf(toArea, shooter.target), arena);
   const tx = to.x + (Math.random() - 0.5) * 10;
   const ty = to.y + (Math.random() - 0.5) * 10;
@@ -1516,6 +1537,7 @@ async function runReveal(duel) {
   $('fx-layer').innerHTML = '';
   const scene = $('arena-scene');
   scene.innerHTML = sceneHTML({ mode: 'reveal', self, opp, pos: mineSide.pos, oppPos: oppSide.pos });
+  layoutScene(scene);
   $('arena').scrollIntoView({ behavior: 'smooth', block: 'center' });
 
   await sleep(300);
@@ -1702,6 +1724,10 @@ function init() {
   $('btn-confirm').addEventListener('click', confirmChoice);
 
   setInterval(updateTimer, 250);
+  // A posição dos pistoleiros é calculada em pixels: refaz ao mudar o tamanho
+  window.addEventListener('resize', () => {
+    ['choice-scene', 'arena-scene'].forEach((id) => { if ($(id).offsetParent) layoutScene($(id)); });
+  });
 
   if (location.protocol === 'file:') {
     setNetStatus('Este jogo é online: rode "node server.js" e abra http://localhost:3000');
